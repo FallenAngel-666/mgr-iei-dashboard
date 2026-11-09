@@ -2,16 +2,20 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../common/Modal';
 import { createTask } from '../../services/firebaseService';
+import { getISOWeekDetails, generateWeekOptions } from '../../utils/dateUtils';
 import { Briefcase, User, Calendar, AlertCircle } from 'lucide-react';
 
 export function AssignTaskModal({ isOpen, onClose, members = [] }) {
   const { currentUser } = useAuth();
+  const currentWeek = getISOWeekDetails();
+  const availableWeekOptions = generateWeekOptions().filter((w) => w.tag !== 'all');
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState('High');
-  const [weeklyTag, setWeeklyTag] = useState('2026-W45');
+  const [weeklyTag, setWeeklyTag] = useState(currentWeek.tag);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -145,9 +149,11 @@ export function AssignTaskModal({ isOpen, onClose, members = [] }) {
               onChange={(e) => setWeeklyTag(e.target.value)}
               className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
             >
-              <option value="2026-W45">Current (Week 45)</option>
-              <option value="2026-W46">Next (Week 46)</option>
-              <option value="2026-W44">Previous (Week 44)</option>
+              {availableWeekOptions.map((opt) => (
+                <option key={opt.tag} value={opt.tag}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>

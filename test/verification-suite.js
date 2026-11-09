@@ -40,6 +40,12 @@ import {
 } from '../src/services/credentialService.js';
 
 import {
+  getISOWeekDetails,
+  getISOWeekDateRange,
+  generateWeekOptions
+} from '../src/utils/dateUtils.js';
+
+import {
   submitWorkReport,
   processFirstLevelReview,
   processFinalApproval
@@ -574,6 +580,61 @@ async function runTestSuite() {
     assert.ok(remainingUpdates.length > 0, 'Community updates remain completely intact');
     assert.ok(remainingEvents.length > 0, 'Events remain completely intact');
     assert.ok(remainingAttendance.length > 0, 'Attendance records remain completely intact');
+  });
+
+  // 11. DYNAMIC WEEKLY REPORT CYCLES & 2027 ROLLOVER
+  console.log('\n--- 11. Dynamic ISO Week Calculations & 2027 Fresh Start ---');
+  test('Current week calculates dynamically from real date (e.g. 2026-W46 for Nov 2026)', () => {
+    const testDate = new Date('2026-11-09T10:00:00Z');
+    const weekDetails = getISOWeekDetails(testDate);
+    assert.strictEqual(weekDetails.year, 2026);
+    assert.strictEqual(weekDetails.week, 46);
+    assert.strictEqual(weekDetails.tag, '2026-W46');
+  });
+
+  test('When year rolls over to 2027, week cycle starts freshly at Week 01 (2027-W01)', () => {
+    const newYear2027 = new Date('2027-01-04T10:00:00Z'); // First Monday of 2027
+    const weekDetails = getISOWeekDetails(newYear2027);
+    assert.strictEqual(weekDetails.year, 2027, 'ISO year rolls to 2027');
+    assert.strictEqual(weekDetails.week, 1, 'Week number resets freshly to Week 1');
+    assert.strictEqual(weekDetails.tag, '2027-W01', 'Official tag is 2027-W01');
+
+    const range = getISOWeekDateRange(2027, 1);
+    assert.strictEqual(range, 'Jan 04 - 10', 'Displays Jan 04 - 10 date range');
+  });
+
+  await asyncTest('All 2026 historical tasks and records remain saved in the cloud and accessible alongside 2027 weeks', async () => {
+    const exec = loadedMembers.find((m) => m.role === ROLES.EXECUTIVE_MEMBER);
+    const chairman = loadedMembers.find((m) => m.role === ROLES.CHAIRMAN);
+
+    // Create a 2027 task to test year rollover coexistence
+    const task2027 = await createTask({
+      title: 'IEI National Annual Convention 2027 Planning',
+      description: 'Kick-off meeting for 2027 technical initiatives.',
+      assignedToId: exec.id,
+      assignedToName: exec.name,
+      assignedToRole: exec.role,
+      assignedById: chairman.id,
+      assignedByName: chairman.name,
+      assignedByRole: chairman.role,
+      weeklyTag: '2027-W01'
+    });
+
+    assert.ok(task2027.id);
+    assert.strictEqual(task2027.weeklyTag, '2027-W01');
+
+    // Verify all tasks (both 2026 and 2027) exist in store
+    const allTasks = await getTasks();
+    const has2026 = allTasks.some((t) => (t.weeklyTag || '').startsWith('2026'));
+    const has2027 = allTasks.some((t) => (t.weeklyTag || '').startsWith('2027'));
+
+    assert.ok(has2026, '2026 historical tasks remain completely preserved in storage');
+    assert.ok(has2027, '2027 newly created tasks coexist seamlessly');
+
+    // Dynamic dropdown includes both current and historical weeks
+    const dropdownOptions = generateWeekOptions(allTasks, new Date('2026-11-09'));
+    assert.ok(dropdownOptions.some((o) => o.tag === '2027-W01'), '2027 tasks are discoverable in dropdown');
+    assert.ok(dropdownOptions.some((o) => o.tag === 'all'), 'All Recorded Weeks (Cumulative) option exists');
   });
 
   console.log('\n================================================================');

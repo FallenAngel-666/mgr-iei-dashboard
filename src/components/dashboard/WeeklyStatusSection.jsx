@@ -13,23 +13,20 @@ import {
 import { WORK_STATUSES } from '../../config/roles';
 import { StatusBadge } from '../common/StatusBadge';
 import { generateWeeklyStatusPDF } from '../../services/pdfService';
+import { getISOWeekDetails, generateWeekOptions } from '../../utils/dateUtils';
 
 export function WeeklyStatusSection({ tasks = [], updates = [], onSelectTask }) {
-  const [selectedWeek, setSelectedWeek] = useState('Current Week (Week 45)');
+  const currentDetails = getISOWeekDetails();
+  const weekOptions = generateWeekOptions(tasks);
+  const [selectedWeekTag, setSelectedWeekTag] = useState(currentDetails.tag);
 
-  // Week options
-  const weekOptions = [
-    { label: 'Current Week (Week 45)', tag: '2026-W45' },
-    { label: 'Week 44 (Oct 26 - Nov 01)', tag: '2026-W44' },
-    { label: 'Week 43 (Oct 19 - Oct 25)', tag: '2026-W43' },
-    { label: 'All Recorded Weeks', tag: 'all' }
-  ];
+  // Active option label for PDF generation & header display
+  const activeOption = weekOptions.find((w) => w.tag === selectedWeekTag) || weekOptions[0];
 
-  // Filter tasks by week
+  // Filter tasks by week (supports cumulative 'all' view or exact weeklyTag matching)
   const filteredTasks = tasks.filter((t) => {
-    const currentOpt = weekOptions.find((w) => w.label === selectedWeek);
-    if (!currentOpt || currentOpt.tag === 'all') return true;
-    return t.weeklyTag === currentOpt.tag || (!t.weeklyTag && currentOpt.tag === '2026-W44');
+    if (selectedWeekTag === 'all') return true;
+    return t.weeklyTag === selectedWeekTag;
   });
 
   // Calculate metrics for selected week
@@ -47,7 +44,7 @@ export function WeeklyStatusSection({ tasks = [], updates = [], onSelectTask }) 
   const completionRate = assignedCount > 0 ? Math.round((completedCount / assignedCount) * 100) : 0;
 
   const handleExportPDF = () => {
-    generateWeeklyStatusPDF(selectedWeek, filteredTasks, {
+    generateWeeklyStatusPDF(activeOption?.label || selectedWeekTag, filteredTasks, {
       total: assignedCount,
       completed: completedCount,
       inProgress: pendingCount,
@@ -77,12 +74,12 @@ export function WeeklyStatusSection({ tasks = [], updates = [], onSelectTask }) 
           {/* Week Selector Dropdown */}
           <div className="relative">
             <select
-              value={selectedWeek}
-              onChange={(e) => setSelectedWeek(e.target.value)}
-              className="appearance-none bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg pl-3 pr-8 py-2 focus:ring-2 focus:ring-iei-navy-500 cursor-pointer shadow-2xs"
+              value={selectedWeekTag}
+              onChange={(e) => setSelectedWeekTag(e.target.value)}
+              className="appearance-none bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg pl-3 pr-8 py-2 focus:ring-2 focus:ring-iei-navy-500 cursor-pointer shadow-2xs max-w-xs truncate"
             >
               {weekOptions.map((opt) => (
-                <option key={opt.tag} value={opt.label}>
+                <option key={opt.tag} value={opt.tag}>
                   {opt.label}
                 </option>
               ))}

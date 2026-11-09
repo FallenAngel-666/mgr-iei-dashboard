@@ -27,6 +27,7 @@ import {
 } from '../config/seedData.js';
 
 import { generateUsername, generateStrongPassword } from './credentialService.js';
+import { getISOWeekDetails } from '../utils/dateUtils.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
 // v7 prefix ensures Swathi Nandhana & Ramya Sri membership directory access loads cleanly
@@ -251,10 +252,12 @@ export async function getTasks() {
 }
 
 export async function createTask(taskData) {
+  const currentWeek = getISOWeekDetails();
   const newTask = {
     ...taskData,
     id: `task-${Date.now()}`,
     assignedDate: taskData.assignedDate || new Date().toISOString().split('T')[0],
+    weeklyTag: taskData.weeklyTag || currentWeek.tag,
     status: taskData.status || 'Assigned',
     progress: taskData.progress || 0,
     updates: [],
