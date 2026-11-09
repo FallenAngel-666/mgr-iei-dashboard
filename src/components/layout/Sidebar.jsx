@@ -5,7 +5,8 @@ import {
   isStaffCoordinator,
   canManageMembers,
   canAccessMembersDirectory,
-  canAccessManagementReports
+  canAccessManagementReports,
+  canAccessProfileUpdate
 } from '../../config/roles';
 import { 
   LayoutDashboard, 
@@ -19,6 +20,7 @@ import {
   Award, 
   Trophy, 
   Megaphone,
+  Globe,
   X,
   Building2
 } from 'lucide-react';
@@ -98,12 +100,21 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
       label: 'Announcements',
       icon: Megaphone,
       badge: null
+    },
+    {
+      id: 'profileUpdate',
+      label: 'IEI Profile Update',
+      icon: Globe,
+      badge: null
     }
   ];
 
   const canSeeMembers = canAccessMembersDirectory(currentUser);
+  const canEditPublicProfile = canAccessProfileUpdate(role);
+
   const visibleNavItems = navItems.filter((item) => {
     if (item.id === 'members' && !canSeeMembers) return false;
+    if (item.id === 'profileUpdate' && !canEditPublicProfile) return false;
     return true;
   });
 

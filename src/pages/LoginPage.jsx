@@ -9,11 +9,12 @@ import {
   AlertCircle, 
   Building2,
   KeyRound,
-  CheckCircle2
+  CheckCircle2,
+  ArrowLeft
 } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 
-export function LoginPage() {
+export function LoginPage({ onBackToWelcome }) {
   const { login, resetPassword, loading, authError } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -62,6 +63,15 @@ export function LoginPage() {
 
       {/* Main Login Card */}
       <div className="w-full max-w-md mx-auto my-auto py-8">
+        {onBackToWelcome && (
+          <button
+            onClick={onBackToWelcome}
+            className="mb-4 inline-flex items-center gap-2 text-xs font-bold text-iei-gold-400 hover:text-iei-gold-300 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Public Welcome Portal</span>
+          </button>
+        )}
         <div className="bg-white text-slate-900 rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
           {/* Header with Official Website Logo & APK Crest */}
           <div className="bg-gradient-to-b from-slate-50 to-slate-100/90 p-6 border-b border-slate-200/80 text-center">

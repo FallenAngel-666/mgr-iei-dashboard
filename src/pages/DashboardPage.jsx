@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subscribeToData } from '../services/firebaseService';
-import { WORK_STATUSES, isFirstLevelApprover, isStaffCoordinator, canAccessMembersDirectory } from '../config/roles';
+import { WORK_STATUSES, isFirstLevelApprover, isStaffCoordinator, canAccessMembersDirectory, canAccessProfileUpdate } from '../config/roles';
 
 // Components
 import { Navbar } from '../components/layout/Navbar';
@@ -26,6 +26,7 @@ import { ReportsCenter } from '../components/reports/ReportsCenter';
 import { CertificatesList } from '../components/certificates/CertificatesList';
 import { AchievementsList } from '../components/achievements/AchievementsList';
 import { AnnouncementsList } from '../components/announcements/AnnouncementsList';
+import { ProfileUpdateView } from '../components/profile/ProfileUpdateView';
 
 export function DashboardPage() {
   const { currentUser } = useAuth();
@@ -236,6 +237,30 @@ export function DashboardPage() {
             {/* ANNOUNCEMENTS TAB */}
             {activeTab === 'announcements' && (
               <AnnouncementsList announcements={announcements} />
+            )}
+
+            {/* IEI PROFILE UPDATE TAB - Strictly restricted to Chairman, Vice Chairman, Secretary, Joint Secretary, Admin */}
+            {activeTab === 'profileUpdate' && (
+              canAccessProfileUpdate(currentUser?.role) ? (
+                <ProfileUpdateView />
+              ) : (
+                <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center max-w-md mx-auto my-12 shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                    🔒
+                  </div>
+                  <h3 className="text-base font-bold text-iei-navy-950">Directorate Access Restricted</h3>
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                    The IEI Profile Update section is exclusively accessible to 
+                    <strong className="text-iei-navy-900 block mt-1">Chairman, Vice Chairman, Secretary &amp; Joint Secretary</strong>
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('dashboard')}
+                    className="mt-5 px-4 py-2 bg-iei-navy-900 hover:bg-iei-navy-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  >
+                    Return to Chapter Dashboard
+                  </button>
+                </div>
+              )
             )}
           </div>
         </main>

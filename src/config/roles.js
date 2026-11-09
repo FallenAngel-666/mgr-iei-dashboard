@@ -174,6 +174,23 @@ export function canAccessManagementReports(role) {
   );
 }
 
+/**
+ * Exact Role Permissions for IEI Profile Update:
+ * STRICT RULE: Only Secretary, Joint Secretary, Chairman, Vice Chairman (and Master Administrator)
+ * are authorized to update the public welcome page profile and manage upcoming public events.
+ * Strictly blocked for Executive Members, Membership Director, Event Management Head,
+ * Treasurer, Joint Treasurer, and Staff Coordinator.
+ */
+export function canAccessProfileUpdate(role) {
+  return (
+    isMasterAdmin(role) ||
+    role === ROLES.CHAIRMAN ||
+    role === ROLES.VICE_CHAIRMAN ||
+    role === ROLES.SECRETARY ||
+    role === ROLES.JOINT_SECRETARY
+  );
+}
+
 export function canOverrideAnything(role) {
   return isMasterAdmin(role);
 }

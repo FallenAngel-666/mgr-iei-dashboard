@@ -11,8 +11,18 @@ import {
   canAccessMembersDirectory,
   canManageEvents,
   canRecordAttendance,
+  canAccessProfileUpdate,
   canOverrideAnything
 } from '../src/config/roles.js';
+
+import {
+  getPublicProfileConfig,
+  savePublicProfileConfig,
+  getPublicUpcomingEvents,
+  savePublicUpcomingEvent,
+  deletePublicUpcomingEvent,
+  DEFAULT_PUBLIC_PROFILE
+} from '../src/services/publicProfileService.js';
 
 import {
   getMembers,
@@ -635,6 +645,67 @@ async function runTestSuite() {
     const dropdownOptions = generateWeekOptions(allTasks, new Date('2026-11-09'));
     assert.ok(dropdownOptions.some((o) => o.tag === '2027-W01'), '2027 tasks are discoverable in dropdown');
     assert.ok(dropdownOptions.some((o) => o.tag === 'all'), 'All Recorded Weeks (Cumulative) option exists');
+  });
+
+  // 12. WELCOME PAGE & IEI PROFILE UPDATE
+  console.log('\n--- 12. Public Welcome Page & IEI Profile Update Governance ---');
+  test('IEI Profile Update is strictly accessible ONLY to Secretary, Joint Secretary, Chairman, Vice Chairman, and Admin', () => {
+    // Authorized roles
+    assert.strictEqual(canAccessProfileUpdate(ROLES.CHAIRMAN), true, 'Chairman has access');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.VICE_CHAIRMAN), true, 'Vice Chairman has access');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.SECRETARY), true, 'Secretary has access');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.JOINT_SECRETARY), true, 'Joint Secretary has access');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.ADMINISTRATOR), true, 'Administrator has access');
+
+    // Strictly blocked roles
+    assert.strictEqual(canAccessProfileUpdate(ROLES.EXECUTIVE_MEMBER), false, 'Executive Member is blocked');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.MEMBERSHIP_DIRECTOR), false, 'Membership Director is blocked');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.EVENT_MANAGEMENT_HEAD), false, 'Event Head is blocked');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.TREASURER), false, 'Treasurer is blocked');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.JOINT_TREASURER), false, 'Joint Treasurer is blocked');
+    assert.strictEqual(canAccessProfileUpdate(ROLES.STAFF_COORDINATOR), false, 'Staff Coordinator is blocked');
+  });
+
+  await asyncTest('Public Welcome Page default configuration holds official branding and verified contacts', async () => {
+    const profile = await getPublicProfileConfig();
+    assert.ok(profile.aboutIeiHeading.includes('About IEI'));
+    assert.ok(profile.aboutChapterHeading.includes('About MGR IEI Student Chapter'));
+    assert.strictEqual(profile.carouselPhotos.length, 5, 'Contains exactly five photos in carousel');
+    assert.ok(profile.membershipFormUrl && profile.membershipFormUrl.includes('google.com/forms'));
+
+    // Verified contact persons and actual numbers
+    const geetha = profile.contacts.find((c) => c.name.includes('Geethalakshmi'));
+    const sriman = profile.contacts.find((c) => c.name.includes('Rieman') || c.name.includes('Sriman'));
+    assert.ok(geetha, 'Geethalakshmi is configured as contact');
+    assert.strictEqual(geetha.phone, '9884633809', 'Geethalakshmi phone must match verified directory');
+    assert.ok(sriman, 'S. Rieman Nayanamurthy is configured as contact');
+    assert.strictEqual(sriman.phone, '8015803274', 'Sriman phone must match verified directory');
+  });
+
+  await asyncTest('Upcoming Events starts with empty list for "Updated Soon" state, and supports publishing/removing', async () => {
+    const initialEvents = await getPublicUpcomingEvents();
+    assert.strictEqual(initialEvents.length, 0, 'Initially empty to trigger "Upcoming events will be updated soon."');
+
+    // Authorised user publishes an upcoming event
+    const chairman = loadedMembers.find((m) => m.role === ROLES.CHAIRMAN);
+    const pubEvent = await savePublicUpcomingEvent({
+      title: 'Technovation 2026 — National Student Symposium',
+      date: '2026-11-28',
+      time: '10:00 AM',
+      venue: 'Main Auditorium, Maduravoyal Campus',
+      description: 'Paper presentations, coding sprints, and guest keynote by National Council Fellows.',
+      posterUrl: './assets/website-logo.png'
+    }, chairman);
+
+    assert.ok(pubEvent.id);
+    const updatedEvents = await getPublicUpcomingEvents();
+    assert.strictEqual(updatedEvents.length, 1);
+    assert.strictEqual(updatedEvents[0].title, 'Technovation 2026 — National Student Symposium');
+
+    // Clean up event to restore pristine state
+    await deletePublicUpcomingEvent(pubEvent.id);
+    const finalEvents = await getPublicUpcomingEvents();
+    assert.strictEqual(finalEvents.length, 0, 'Cleanly restored to empty state');
   });
 
   console.log('\n================================================================');

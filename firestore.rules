@@ -37,6 +37,24 @@ service cloud.firestore {
       );
     }
 
+    // Public Welcome Page Profile (Public Read, Directorate Write)
+    match /iei_public_profile/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && (
+        getUserRole() in ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary', 'Administrator'] ||
+        isStaffCoordinator()
+      );
+    }
+
+    // Public Upcoming Events & Posters (Public Read, Directorate Write)
+    match /iei_public_events/{eventId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && (
+        getUserRole() in ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary', 'Administrator'] ||
+        isStaffCoordinator()
+      );
+    }
+
     // Members Directory & Committee Register
     match /iei_members/{memberId} {
       allow read: if isMembersDirectoryAuthorized();
