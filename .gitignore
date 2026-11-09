@@ -9,9 +9,8 @@ build/
 release/
 
 # Compiled Standalone Installers & Binaries (Keep source, deliver from CI/Release)
-# Comment out if you want to track pre-compiled binaries in git:
-# *.apk
-# *.exe
+*.apk
+*.exe
 
 # Environment variables & local secrets
 .env.local
