@@ -29,8 +29,8 @@ import {
 import { generateUsername, generateStrongPassword } from './credentialService.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
-// v6 prefix ensures meeting broadcast & directory privacy permissions load cleanly
-const STORAGE_PREFIX = 'iei_mgr_v6_';
+// v7 prefix ensures Swathi Nandhana & Ramya Sri membership directory access loads cleanly
+const STORAGE_PREFIX = 'iei_mgr_v7_';
 
 function getLocalData(key, fallback) {
   try {
@@ -71,6 +71,7 @@ if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('iei_mgr_v3_' + k);
       localStorage.removeItem('iei_mgr_v4_' + k);
       localStorage.removeItem('iei_mgr_v5_' + k);
+      localStorage.removeItem('iei_mgr_v6_' + k);
     });
   } catch (e) {
     // ignore

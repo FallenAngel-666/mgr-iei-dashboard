@@ -182,11 +182,11 @@ export const INITIAL_MEMBERS = [
     joinedDate: '2026-10-29'
   },
   {
-    id: 'user-emhead-swathi',
+    id: 'user-memdir-swathi',
     name: 'SWATHI NANDHANA M',
-    role: ROLES.EVENT_MANAGEMENT_HEAD,
-    username: 'swathi.emhead-01',
-    secondaryUsername: 'swathi.memdir-01',
+    role: ROLES.MEMBERSHIP_DIRECTOR,
+    username: 'swathi.memdir-01',
+    secondaryUsername: 'swathi.emhead-01',
     password: 'IEI#Swathi*8392',
     email: 'swathinandhana3@gmail.com',
     secondaryEmail: 'swathinandhana3@gmail.com',

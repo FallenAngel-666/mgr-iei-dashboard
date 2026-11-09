@@ -20,7 +20,7 @@
 | 9 | **LOKESHVARI V** | Treasurer | `lokeshvari.tres-01` | — | `IEI#Lokesh*3829` | `logipraveena30@gmail.com` | `9944915106` | Restricted |
 | 10 | **KALAIVANI N** | Joint Treasurer | `kalaivani.jtres-01` | — | `IEI#Kalaivani*7154` | `kalaivanin029@gmail.com` | `9344544643` | Restricted |
 | 11 | **RAMYA SRI M** | Membership Director | `ramya.memdir-01` | `ramya.emhead-01` | `IEI#Ramya*9164` | `ramyoshiii017@gmail.com` | `9789961609` | **Authorized Access** |
-| 12 | **SWATHI NANDHANA M** | Event Management Head | `swathi.emhead-01` | `swathi.memdir-01` | `IEI#Swathi*8392` | `swathinandhana3@gmail.com` | `8754709407` | Restricted |
+| 12 | **SWATHI NANDHANA M** | Membership Director | `swathi.memdir-01` | `swathi.emhead-01` | `IEI#Swathi*8392` | `swathinandhana3@gmail.com` | `8754709407` | **Authorized Access** |
 | 13 | **AAKANISH ANANTHIKA E** | Executive Member | `aakanish.exec-01` | — | `IEI#Aakanish*6173` | `it.e250509@gmail.com` | `9043433097` | Restricted |
 | 14 | **VISHAVAJIT V** | Executive Member | `vishavajit.exec-02` | — | `IEI#Vishava*4298` | `vishvajit11.7@gmail.com` | `8072020406` | Restricted |
 | 15 | **JAYAVARSAN A** | Executive Member | `jayavarsan.exec-03` | — | `IEI#Jayavarsan*8521` | `jayavarsan27@gmail.com` | `9952833020` | Restricted |
@@ -41,6 +41,7 @@
    - The Membership Directory is confidential and strictly accessible **ONLY** to:
      - **Sri Priyan S** (Joint Secretary)
      - **Ramya Sri M** (Membership Director)
+     - **Swathi Nandhana M** (Membership Director)
      - **Administrator** (Master User)
    - For all other users (Chairmen, Vice Chairman, Secretaries, Treasurers, Executive Members, Staff), the **Members Directory** tab is completely removed from navigation, and direct access routes are blocked.
 2. **Event & Meeting Scheduling (Chairmen & Secretaries):**

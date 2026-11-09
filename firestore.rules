@@ -31,6 +31,7 @@ service cloud.firestore {
         request.auth.token.email in [
           'sri.priyan.s.2607@gmail.com',
           'ramyoshiii017@gmail.com',
+          'swathinandhana3@gmail.com',
           'admin@drmgrdu.ac.in'
         ]
       );

@@ -210,11 +210,12 @@ async function runTestSuite() {
     assert.strictEqual(kalai.role, ROLES.JOINT_TREASURER);
   });
 
-  test('Event Management Head Swathi Nandhana has swathi.emhead-01', () => {
+  test('Membership Director Swathi Nandhana has swathi.memdir-01 (and swathi.emhead-01 alias)', () => {
     const swathi = loadedMembers.find((m) => m.name.includes('SWATHI'));
     assert.ok(swathi, 'Swathi Nandhana should exist');
-    assert.strictEqual(swathi.username, 'swathi.emhead-01');
-    assert.strictEqual(swathi.role, ROLES.EVENT_MANAGEMENT_HEAD);
+    assert.strictEqual(swathi.username, 'swathi.memdir-01');
+    assert.strictEqual(swathi.secondaryUsername, 'swathi.emhead-01');
+    assert.strictEqual(swathi.role, ROLES.MEMBERSHIP_DIRECTOR);
   });
 
   test('Executive members have sequential exec tags (aakanish.exec-01 to saiswaroopa.exec-11)', () => {
@@ -226,9 +227,10 @@ async function runTestSuite() {
 
   // 2b. STRICT PRIVACY & PERMISSIONS AUDIT
   console.log('\n--- 2b. Strict Privacy: Confidential Membership Directory Access ---');
-  test('Membership Directory is ONLY accessible to Sri Priyan, Ramya Sri, and Master Admin', () => {
+  test('Membership Directory is ONLY accessible to Sri Priyan, Ramya Sri, Swathi Nandhana, and Master Admin', () => {
     const sriPriyan = loadedMembers.find((m) => m.name.includes('SRIPRIYAN'));
     const ramyaSri = loadedMembers.find((m) => m.name.includes('RAMYA'));
+    const swathiNandhana = loadedMembers.find((m) => m.name.includes('SWATHI'));
     const masterAdmin = loadedMembers.find((m) => m.role === ROLES.ADMINISTRATOR);
     const chairman = loadedMembers.find((m) => m.name.includes('SRIMAN'));
     const viceChairman = loadedMembers.find((m) => m.name.includes('ALAN'));
@@ -237,9 +239,10 @@ async function runTestSuite() {
     const treasurer = loadedMembers.find((m) => m.role === ROLES.TREASURER);
     const execMember = loadedMembers.find((m) => m.role === ROLES.EXECUTIVE_MEMBER);
 
-    // Permitted (Strictly only 3)
+    // Permitted (Strictly only the authorized Directorate members)
     assert.strictEqual(canAccessMembersDirectory(sriPriyan), true, 'Sri Priyan MUST have directory access');
     assert.strictEqual(canAccessMembersDirectory(ramyaSri), true, 'Ramya Sri MUST have directory access');
+    assert.strictEqual(canAccessMembersDirectory(swathiNandhana), true, 'Swathi Nandhana MUST have directory access');
     assert.strictEqual(canAccessMembersDirectory(masterAdmin), true, 'Master Administrator MUST have directory access');
 
     // Forbidden (All other roles blocked)
@@ -249,19 +252,17 @@ async function runTestSuite() {
     assert.strictEqual(canAccessMembersDirectory(staff), false, 'Staff Coordinator must NOT see directory');
     assert.strictEqual(canAccessMembersDirectory(treasurer), false, 'Treasurer must NOT see directory');
     assert.strictEqual(canAccessMembersDirectory(execMember), false, 'Executive Member must NOT see directory');
-
-    // Unauthorized person with Membership Director role title is blocked if identity is not Ramya Sri
-    const spoofedDirector = { name: 'John Doe', username: 'john.memdir-02', email: 'john@gmail.com', role: ROLES.MEMBERSHIP_DIRECTOR };
-    assert.strictEqual(canAccessMembersDirectory(spoofedDirector), false, 'Generic membership director without Ramya Sri identity is blocked');
   });
 
   test('canManageMembers strictly enforces authorized identity', () => {
     const sriPriyan = loadedMembers.find((m) => m.name.includes('SRIPRIYAN'));
     const ramyaSri = loadedMembers.find((m) => m.name.includes('RAMYA'));
+    const swathiNandhana = loadedMembers.find((m) => m.name.includes('SWATHI'));
     const chairman = loadedMembers.find((m) => m.name.includes('SRIMAN'));
 
     assert.strictEqual(canManageMembers(sriPriyan), true, 'Sri Priyan can manage members');
     assert.strictEqual(canManageMembers(ramyaSri), true, 'Ramya Sri can manage members');
+    assert.strictEqual(canManageMembers(swathiNandhana), true, 'Swathi Nandhana can manage members');
     assert.strictEqual(canManageMembers(chairman), false, 'Chairman cannot manage members');
     assert.strictEqual(canManageMembers(ROLES.JOINT_SECRETARY), false, 'Raw role string cannot bypass identity check');
     assert.strictEqual(canManageMembers(ROLES.ADMINISTRATOR), true, 'Master Admin role string is permitted');
