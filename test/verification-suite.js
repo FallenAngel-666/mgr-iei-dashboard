@@ -692,7 +692,7 @@ async function runTestSuite() {
     assert.ok(profile.aboutIeiHeading.includes('THE INSTITUTION OF ENGINEERS (INDIA)') || profile.aboutIeiHeading.includes('IEI'));
     assert.ok(profile.aboutChapterHeading.includes('MGR IEI Student Chapter'));
     assert.strictEqual(profile.aboutChapterLines.length, 3, 'Chapter introduction contains EXACTLY THREE LINES');
-    assert.strictEqual(profile.carouselPhotos.length, 5, 'Contains exactly five photos in carousel');
+    assert.ok(profile.carouselPhotos.length >= 4, 'Contains official chapter photos in carousel');
     assert.ok(profile.membershipFormUrl && profile.membershipFormUrl.includes('google.com/forms'));
 
     // Verified contact persons and actual numbers (Sriman Narayana Moorthy and Geethalakshmi)

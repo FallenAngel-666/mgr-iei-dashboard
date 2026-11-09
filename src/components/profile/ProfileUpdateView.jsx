@@ -462,14 +462,14 @@ export function ProfileUpdateView() {
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-sm font-bold text-iei-navy-950 font-serif">
-                Five Photographs of MGR IEI Student Chapter
+                Photographs of MGR IEI Student Chapter
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Upload, replace, or customize each of the five photographs displayed in the 1-second automatic slideshow.
+                Upload, replace, or manage the photographs displayed in the 1-second automatic slideshow.
               </p>
             </div>
             <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-              5 Photos Active
+              {(profile.carouselPhotos || []).length} Photos Active
             </span>
           </div>
 
@@ -483,14 +483,14 @@ export function ProfileUpdateView() {
                 <div className="w-28 h-28 rounded-xl bg-slate-900 border border-slate-300 overflow-hidden flex items-center justify-center shrink-0">
                   <img
                     src={photo.url}
-                    alt={photo.title || `Photograph ${idx + 1}`}
+                    alt={`Photograph ${idx + 1}`}
                     className="max-h-full max-w-full object-contain"
                   />
                 </div>
 
                 {/* Photo Fields */}
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                  <div className="sm:col-span-2">
+                <div className="flex-1 space-y-2 w-full">
+                  <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Photograph {idx + 1} Image Source URL or Upload
                     </label>
@@ -499,7 +499,7 @@ export function ProfileUpdateView() {
                         type="text"
                         value={photo.url}
                         onChange={(e) => handlePhotoChange(idx, 'url', e.target.value)}
-                        placeholder="Image URL or local path (/assets/apk-logo.png)"
+                        placeholder="Image URL or local path"
                         className="flex-1 text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
                       />
                       <label className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg cursor-pointer flex items-center gap-1.5 shrink-0">
@@ -513,32 +513,6 @@ export function ProfileUpdateView() {
                         />
                       </label>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Photograph Title / Heading
-                    </label>
-                    <input
-                      type="text"
-                      value={photo.title || ''}
-                      onChange={(e) => handlePhotoChange(idx, 'title', e.target.value)}
-                      placeholder="e.g. Dr. M.G.R. Educational and Research Institute"
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Photograph Caption / Subtitle
-                    </label>
-                    <input
-                      type="text"
-                      value={photo.caption || ''}
-                      onChange={(e) => handlePhotoChange(idx, 'caption', e.target.value)}
-                      placeholder="e.g. NAAC A+ Accredited Campus • Maduravoyal"
-                      className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
-                    />
                   </div>
                 </div>
               </div>

@@ -418,7 +418,7 @@ export function WelcomePage({ onNavigateToLogin }) {
       </section>
 
       {/* ============================================================ */}
-      {/* 3. CHAPTER PHOTO GALLERY (FIVE PHOTOGRAPHS)                  */}
+      {/* 3. CHAPTER PHOTO GALLERY                                     */}
       {/* ============================================================ */}
       <section id="gallery" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900 text-white">
         <div className="max-w-5xl mx-auto text-center mb-10">
@@ -430,11 +430,11 @@ export function WelcomePage({ onNavigateToLogin }) {
             Chapter Photo Gallery
           </h2>
           <p className="text-xs text-slate-400 mt-2">
-            Five chapter photographs in continuous automatic slideshow rotation (1 second loop)
+            Official chapter photographs in continuous automatic slideshow rotation (1 second loop)
           </p>
         </div>
 
-        {/* 5-Photo 1-Second Carousel */}
+        {/* Chapter Photo Carousel */}
         <PhotoCarousel photos={profile.carouselPhotos} />
       </section>
 

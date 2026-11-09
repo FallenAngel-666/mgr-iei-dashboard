@@ -24,37 +24,23 @@ export const DEFAULT_PUBLIC_PROFILE = {
   ],
   aboutChapterContent: 'Empowering future engineers through multidisciplinary technical symposiums, research, and innovation.\nFostering academic excellence, professional ethics, and hands-on technological leadership across departments.\nOperating under the national charter of The Institution of Engineers (India) at Dr. M.G.R. Educational and Research Institute.',
   
-  // 5-photo automatic carousel configuration (5 photos)
+  // Chapter Photo Gallery (Official chapter photographs without logo or text overlay)
   carouselPhotos: [
     {
       id: 'photo-1',
-      url: '/assets/gallery/gallery-1-best-chapter-award.jpg',
-      title: 'IE(I) Best Students Chapter Award (Engineering) 2026',
-      caption: 'The Institution of Engineers (India) Tamilnadu State Centre Presentation'
+      url: '/assets/gallery/gallery-1-best-chapter-award.jpg'
     },
     {
       id: 'photo-2',
-      url: '/assets/gallery/gallery-2-rain26-cultural-fest.jpg',
-      title: 'MGR Cultural Fest RAIN\'26 — Chapter Delegation',
-      caption: 'Dr. M.G.R. Educational and Research Institute Committee Members'
+      url: '/assets/gallery/gallery-2-rain26-cultural-fest.jpg'
     },
     {
       id: 'photo-3',
-      url: '/assets/gallery/gallery-3-rain26-valedictory.jpg',
-      title: 'RAIN\'26 Technical Symposium & Brochure Release',
-      caption: 'Executive Chapter Committee with Faculty Coordinators & Dignitaries'
+      url: '/assets/gallery/gallery-3-rain26-valedictory.jpg'
     },
     {
       id: 'photo-4',
-      url: '/assets/gallery/gallery-4-presidential-felicitation.jpg',
-      title: 'Presidential Felicitation & Institutional Newsletter Launch',
-      caption: 'Presenting Chapter Proceedings to University Leadership'
-    },
-    {
-      id: 'photo-5',
-      url: '/assets/gallery/gallery-5-official-chapter-emblem.png',
-      title: 'The Institution of Engineers (India) — Established 1920',
-      caption: 'Chartered 1935 • Dr. M.G.R. Student Chapter Division'
+      url: '/assets/gallery/gallery-4-presidential-felicitation.jpg'
     }
   ],
 
@@ -87,8 +73,8 @@ export const DEFAULT_PUBLIC_PROFILE = {
   upcomingEvents: []
 };
 
-const PROFILE_STORAGE_KEY = 'iei_public_profile_v5';
-const EVENTS_STORAGE_KEY = 'iei_public_events_v5';
+const PROFILE_STORAGE_KEY = 'iei_public_profile_v6';
+const EVENTS_STORAGE_KEY = 'iei_public_events_v6';
 
 function getLocalData(key, fallback) {
   try {
@@ -128,14 +114,12 @@ function getLocalData(key, fallback) {
       parsed.aboutChapterHeading = 'About MGR IEI Student Chapter';
     }
 
-    // Auto-migrate carousel photos if still using old placeholders
+    // Auto-migrate carousel photos: remove logos and strip titles/captions
     if (parsed && Array.isArray(parsed.carouselPhotos)) {
-      const hasPlaceholdersOnly = parsed.carouselPhotos.every((p) => 
-        (p.url || '').includes('website-logo.png') || (p.url || '').includes('apk-logo.png')
-      );
-      if (hasPlaceholdersOnly) {
-        parsed.carouselPhotos = DEFAULT_PUBLIC_PROFILE.carouselPhotos;
-      }
+      const filtered = parsed.carouselPhotos
+        .filter((p) => !(p.url || '').includes('apk-logo') && !(p.url || '').includes('chapter-emblem') && !(p.url || '').includes('website-logo'))
+        .map((p) => ({ id: p.id, url: p.url }));
+      parsed.carouselPhotos = filtered.length > 0 ? filtered : DEFAULT_PUBLIC_PROFILE.carouselPhotos;
     }
 
     return parsed;
