@@ -1230,6 +1230,18 @@ async function runTestSuite() {
       for (const u of remainingUpdates) {
         await deleteDoc(doc(db, 'iei_updates', u.id));
       }
+      const remainingAnns = await getDocs(collection(db, 'iei_announcements'));
+      for (const a of remainingAnns.docs) {
+        await deleteDoc(doc(db, 'iei_announcements', a.id));
+      }
+      const remainingAtt = await getDocs(collection(db, 'iei_attendance'));
+      for (const att of remainingAtt.docs) {
+        await deleteDoc(doc(db, 'iei_attendance', att.id));
+      }
+      const remainingNotifs = await getDocs(collection(db, 'iei_notifications'));
+      for (const n of remainingNotifs.docs) {
+        await deleteDoc(doc(db, 'iei_notifications', n.id));
+      }
       resetToCleanSlate();
     }
   });

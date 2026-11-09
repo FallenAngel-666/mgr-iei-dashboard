@@ -3,7 +3,8 @@ import { useAuth } from './AuthContext';
 import { 
   subscribeToData, 
   markNotificationAsRead, 
-  markAllNotificationsAsRead 
+  markAllNotificationsAsRead,
+  clearAllUserNotifications
 } from '../services/firebaseService';
 
 const NotificationContext = createContext(null);
@@ -46,13 +47,20 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  const clearAll = async () => {
+    if (currentUser) {
+      await clearAllUserNotifications(currentUser.id, currentUser.role);
+    }
+  };
+
   return (
     <NotificationContext.Provider
       value={{
         notifications: allNotifications,
         unreadCount,
         markRead,
-        markAllRead
+        markAllRead,
+        clearAll
       }}
     >
       {children}

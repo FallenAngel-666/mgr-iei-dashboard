@@ -14,7 +14,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 
 export function NotificationDrawer({ isOpen, onClose, onNavigateToItem }) {
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markRead, markAllRead, clearAll } = useNotifications();
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'approvals'
 
   if (!isOpen) return null;
@@ -75,20 +75,34 @@ export function NotificationDrawer({ isOpen, onClose, onNavigateToItem }) {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="text-xs font-semibold text-iei-navy-700 hover:text-iei-navy-900 flex items-center gap-1 px-2.5 py-1 rounded bg-slate-200/60 hover:bg-slate-200"
+                  className="text-[11px] font-semibold text-iei-navy-700 hover:text-iei-navy-900 flex items-center gap-1 px-2 py-1 rounded bg-slate-200/60 hover:bg-slate-200 cursor-pointer"
                   title="Mark all as read"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
-                  Mark all read
+                  Mark read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to clear all notices?')) {
+                      clearAll();
+                    }
+                  }}
+                  className="text-[11px] font-semibold text-rose-700 hover:text-rose-900 flex items-center gap-1 px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 cursor-pointer"
+                  title="Clear all notifications"
+                >
+                  Clear all
                 </button>
               )}
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-600 cursor-pointer ml-1"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>

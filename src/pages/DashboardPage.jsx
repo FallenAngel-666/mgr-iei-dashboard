@@ -112,15 +112,16 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Top Navigation */}
+    <div className="h-screen max-h-screen w-full bg-slate-50 flex flex-col overflow-hidden">
+      {/* Top Navigation - Fixed at top, shrink-0 */}
       <Navbar
         onToggleMobileMenu={() => setMobileMenuOpen(true)}
         onOpenNotifications={() => setIsNotifDrawerOpen(true)}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Desktop Sidebar */}
+      {/* Main Workspace Area: Fixed Sidebar on Left, Smooth Scrollable Content on Right */}
+      <div className="flex-1 flex overflow-hidden min-h-0 w-full relative">
+        {/* Desktop & Mobile Sidebar */}
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -129,8 +130,8 @@ export function DashboardPage() {
           pendingApprovalCount={pendingApprovalsCount}
         />
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+        {/* Main Content Area - Scrollable Container */}
+        <main className="flex-1 overflow-y-auto min-h-0 min-w-0 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
           <div className="max-w-7xl mx-auto">
             {/* DASHBOARD TAB */}
             {activeTab === 'dashboard' && (

@@ -80,7 +80,7 @@ export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-slate-200/80 shadow-xs">
+    <header className="w-full shrink-0 z-30 bg-white border-b border-slate-200/80 shadow-xs">
       {/* Top institutional strip */}
       <div className="bg-iei-navy-950 text-white text-[11px] py-1 px-4 sm:px-6 flex items-center justify-between font-medium">
         <div className="flex items-center gap-2 truncate">
@@ -117,7 +117,7 @@ export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
               alt="Dr. M.G.R. Educational and Research Institute University"
               className="h-10 sm:h-12 w-auto object-contain max-w-[200px] sm:max-w-[280px]"
             />
-            <div className="hidden lg:block border-l border-slate-300 pl-3">
+            <div className="hidden md:block border-l border-slate-300 pl-3">
               <h1 className="text-sm font-bold text-iei-navy-900 leading-tight font-serif">
                 IEI DASHBOARD SYSTEM
               </h1>

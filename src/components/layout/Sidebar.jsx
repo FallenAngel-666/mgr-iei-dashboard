@@ -133,19 +133,19 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-slate-900/50 md:hidden backdrop-blur-xs"
+          className="fixed inset-0 z-40 bg-slate-900/60 md:hidden backdrop-blur-xs transition-opacity"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar Container: Locked docked sidebar on Desktop, Smooth drawer on Mobile */}
       <aside 
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-iei-navy-900 text-white flex flex-col border-r border-iei-navy-800 transition-transform duration-200 ease-in-out md:translate-x-0 md:static ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-iei-navy-900 text-white flex flex-col border-r border-iei-navy-800 shadow-2xl transition-transform duration-300 ease-in-out md:static md:inset-auto md:z-10 md:w-64 lg:w-72 md:h-full md:shrink-0 md:shadow-none md:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Brand Area with APK Logo (Official IEI Emblem) */}
-        <div className="p-4 border-b border-iei-navy-800 flex items-center justify-between">
+        <div className="shrink-0 p-4 border-b border-iei-navy-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img 
               src="/assets/apk-logo.png" 
@@ -166,14 +166,15 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
           </div>
           <button 
             onClick={() => setMobileOpen(false)}
-            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg"
+            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg cursor-pointer"
+            aria-label="Close Navigation"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <div className="flex-1 py-4 px-3 overflow-y-auto space-y-1">
+        {/* Navigation Items - Scrollable independently if items exceed viewport */}
+        <div className="flex-1 min-h-0 py-4 px-3 overflow-y-auto space-y-1">
           <div className="px-3 py-1.5 text-[10px] font-bold text-iei-navy-300 uppercase tracking-wider">
             Management Modules
           </div>
@@ -209,7 +210,7 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
         </div>
 
         {/* Footer info: Institutional seal badge */}
-        <div className="p-3 border-t border-iei-navy-800 bg-iei-navy-950/70">
+        <div className="shrink-0 p-3 border-t border-iei-navy-800 bg-iei-navy-950/70">
           <div className="flex items-center gap-2.5">
             <Building2 className="w-5 h-5 text-iei-gold-400 shrink-0" />
             <div className="text-[11px] leading-tight text-slate-300">

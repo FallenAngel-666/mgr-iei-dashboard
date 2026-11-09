@@ -7,17 +7,20 @@ import {
   Paperclip, 
   Calendar, 
   ShieldAlert, 
-  AlertCircle 
+  AlertCircle,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
-import { canManageAnnouncements } from '../../config/roles';
-import { createAnnouncement } from '../../services/firebaseService';
+import { canManageAnnouncements, ROLES } from '../../config/roles';
+import { createAnnouncement, deleteAnnouncement } from '../../services/firebaseService';
 import { formatDistanceToNow } from 'date-fns';
 
 export function AnnouncementsList({ announcements = [] }) {
   const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -33,6 +36,19 @@ export function AnnouncementsList({ announcements = [] }) {
     a.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.publishedByName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleDelete = async (id, annTitle) => {
+    if (!window.confirm(`Are you sure you want to remove the circular "${annTitle}"?`)) return;
+    setDeletingId(id);
+    try {
+      await deleteAnnouncement(id);
+    } catch (err) {
+      console.error('Failed to delete announcement:', err);
+      alert('Failed to delete announcement: ' + (err.message || 'Unknown error'));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -136,9 +152,27 @@ export function AnnouncementsList({ announcements = [] }) {
                   </span>
                 </div>
 
-                <span className="text-[11px] text-slate-500">
-                  By: <strong>{ann.publishedByName}</strong> ({ann.publishedByRole})
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-500">
+                    By: <strong>{ann.publishedByName}</strong> ({ann.publishedByRole})
+                  </span>
+                  {(currentUser?.role === ROLES.ADMINISTRATOR || 
+                    currentUser?.role === ROLES.STAFF_COORDINATOR || 
+                    currentUser?.name === ann.publishedByName) && (
+                    <button
+                      onClick={() => handleDelete(ann.id, ann.title)}
+                      disabled={deletingId === ann.id}
+                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Delete circular notice"
+                    >
+                      {deletingId === ann.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <h3 className="text-base font-bold text-iei-navy-950">

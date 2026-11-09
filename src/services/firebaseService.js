@@ -810,6 +810,20 @@ export async function markAllNotificationsAsRead(userId, userRole) {
   notify('notifications', [...notificationsStore]);
 }
 
+export async function clearAllUserNotifications(userId, userRole) {
+  const toDelete = notificationsStore.filter((n) => 
+    n.recipientId === 'all' || n.recipientId === userId || n.recipientRole === userRole
+  );
+  notificationsStore = notificationsStore.filter((n) => 
+    !(n.recipientId === 'all' || n.recipientId === userId || n.recipientRole === userRole)
+  );
+  notify('notifications', [...notificationsStore]);
+
+  for (const n of toDelete) {
+    syncDeleteFromFirestore('iei_notifications', n.id).catch(() => {});
+  }
+}
+
 // Ensure initial institutional committee records are seeded to Cloud Firestore
 export async function ensureCloudSeeded() {
   if (!db) return;
