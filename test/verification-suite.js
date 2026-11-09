@@ -1213,6 +1213,25 @@ async function runTestSuite() {
       const snap = await getDocs(collection(db, 'system_audit_logs'));
       assert.ok(snap.size > 0, 'Firestore system_audit_logs collection must have recorded audit entries');
     }
+
+    // Teardown test artifacts so live database remains pristine and clean
+    if (db) {
+      if (newlyAddedMember?.id) await deleteMember(newlyAddedMember.id);
+      if (syncTestUser?.id) await deleteMember(syncTestUser.id);
+      const remainingTasks = await getTasks();
+      for (const t of remainingTasks) {
+        await deleteTask(t.id);
+      }
+      const remainingEvents = await getEvents();
+      for (const e of remainingEvents) {
+        await deleteEvent(e.id);
+      }
+      const remainingUpdates = await getUpdates();
+      for (const u of remainingUpdates) {
+        await deleteDoc(doc(db, 'iei_updates', u.id));
+      }
+      resetToCleanSlate();
+    }
   });
 
   console.log('\n================================================================');

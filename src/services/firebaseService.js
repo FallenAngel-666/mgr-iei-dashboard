@@ -32,8 +32,8 @@ import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from './auditService.js'
 import { getPublicProfileConfig, savePublicProfileConfig } from './publicProfileService.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
-// v8 prefix ensures Swathi Nandhana (Membership Director) & Ramya Sri (Event Management Head) roles load cleanly
-const STORAGE_PREFIX = 'iei_mgr_v8_';
+// v9 prefix ensures all sample test entries are purged cleanly across all clients
+const STORAGE_PREFIX = 'iei_mgr_v9_';
 
 function getLocalData(key, fallback) {
   try {
@@ -65,17 +65,14 @@ let certificatesStore = getLocalData('certificates', INITIAL_CERTIFICATES);
 let achievementsStore = getLocalData('achievements', INITIAL_ACHIEVEMENTS);
 let notificationsStore = getLocalData('notifications', INITIAL_NOTIFICATIONS);
 
-// Purge legacy v1, v2, v3, v4, and v5 localStorage keys if present to ensure complete purity
+// Purge legacy v1 through v8 localStorage keys if present to ensure complete purity
 if (typeof localStorage !== 'undefined') {
   try {
     ['members', 'tasks', 'updates', 'events', 'attendance', 'announcements', 'certificates', 'achievements', 'notifications'].forEach((k) => {
       localStorage.removeItem('iei_mgr_' + k);
-      localStorage.removeItem('iei_mgr_v2_' + k);
-      localStorage.removeItem('iei_mgr_v3_' + k);
-      localStorage.removeItem('iei_mgr_v4_' + k);
-      localStorage.removeItem('iei_mgr_v5_' + k);
-      localStorage.removeItem('iei_mgr_v6_' + k);
-      localStorage.removeItem('iei_mgr_v7_' + k);
+      for (let v = 2; v <= 8; v++) {
+        localStorage.removeItem(`iei_mgr_v${v}_` + k);
+      }
     });
   } catch (e) {
     // ignore
@@ -181,7 +178,11 @@ if (db) {
         // For members: merge cloud records with initial committee list
         if (channel === 'members') {
           const map = new Map(INITIAL_MEMBERS.map((m) => [m.id, m]));
-          cloudItems.forEach((item) => map.set(item.id, item));
+          cloudItems.forEach((item) => {
+            if (item && item.id && !item.name?.toLowerCase().includes('kavitha') && item.username !== 'kavitha.exec-12') {
+              map.set(item.id, item);
+            }
+          });
           const merged = Array.from(map.values());
           setStore(merged);
           setLocalData(channel, merged);
