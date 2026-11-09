@@ -29,6 +29,7 @@ import {
 import { generateUsername, generateStrongPassword } from './credentialService.js';
 import { getISOWeekDetails } from '../utils/dateUtils.js';
 import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from './auditService.js';
+import { getPublicProfileConfig, savePublicProfileConfig } from './publicProfileService.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
 // v8 prefix ensures Swathi Nandhana (Membership Director) & Ramya Sri (Event Management Head) roles load cleanly
@@ -102,30 +103,36 @@ function notify(channel, data) {
 }
 
 // Background Firestore synchronization helper (resilient dual-write)
-async function syncToFirestore(colName, docId, data, isMerge = false) {
-  try {
-    if (typeof window !== 'undefined' && db && docId) {
+export async function syncToFirestore(colName, docId, data, isMerge = false) {
+  if (db && docId) {
+    try {
       const docRef = doc(db, colName, String(docId));
       if (isMerge) {
         await setDoc(docRef, data, { merge: true });
       } else {
         await setDoc(docRef, data);
       }
+      return data;
+    } catch (err) {
+      console.warn(`Firestore sync error on ${colName}/${docId}:`, err.message);
+      throw err;
     }
-  } catch (err) {
-    // Cloud sync failure does not break local operations; local storage is already safely committed
   }
+  return data;
 }
 
-async function syncDeleteFromFirestore(colName, docId) {
-  try {
-    if (typeof window !== 'undefined' && db && docId) {
+export async function syncDeleteFromFirestore(colName, docId) {
+  if (db && docId) {
+    try {
       const docRef = doc(db, colName, String(docId));
       await deleteDoc(docRef);
+      return true;
+    } catch (err) {
+      console.warn(`Firestore delete error on ${colName}/${docId}:`, err.message);
+      throw err;
     }
-  } catch (err) {
-    // Resilient
   }
+  return true;
 }
 
 // Subscribe helper
@@ -149,8 +156,8 @@ export function subscribeToData(channel, callback) {
   return () => subscribers[channel].delete(callback);
 }
 
-// Initialize background cloud listeners when in browser environment
-if (typeof window !== 'undefined') {
+// Initialize background cloud listeners for complete real-time synchronization
+if (db) {
   try {
     const collectionsToSync = [
       { name: 'iei_members', channel: 'members', getStore: () => membersStore, setStore: (s) => { membersStore = s; } },
@@ -158,31 +165,53 @@ if (typeof window !== 'undefined') {
       { name: 'iei_updates', channel: 'updates', getStore: () => updatesStore, setStore: (s) => { updatesStore = s; } },
       { name: 'iei_events', channel: 'events', getStore: () => eventsStore, setStore: (s) => { eventsStore = s; } },
       { name: 'iei_attendance', channel: 'attendance', getStore: () => attendanceStore, setStore: (s) => { attendanceStore = s; } },
-      { name: 'iei_announcements', channel: 'announcements', getStore: () => announcementsStore, setStore: (s) => { announcementsStore = s; } }
+      { name: 'iei_announcements', channel: 'announcements', getStore: () => announcementsStore, setStore: (s) => { announcementsStore = s; } },
+      { name: 'iei_certificates', channel: 'certificates', getStore: () => certificatesStore, setStore: (s) => { certificatesStore = s; } },
+      { name: 'iei_achievements', channel: 'achievements', getStore: () => achievementsStore, setStore: (s) => { achievementsStore = s; } },
+      { name: 'iei_notifications', channel: 'notifications', getStore: () => notificationsStore, setStore: (s) => { notificationsStore = s; } }
     ];
 
     collectionsToSync.forEach(({ name, channel, getStore, setStore }) => {
       onSnapshot(collection(db, name), (snapshot) => {
-        if (!snapshot.empty) {
-          const cloudItems = [];
-          snapshot.forEach((d) => cloudItems.push({ id: d.id, ...d.data() }));
-          if (cloudItems.length > 0) {
-            const currentMap = new Map(getStore().map(item => [item.id, item]));
-            cloudItems.forEach(item => currentMap.set(item.id, item));
-            const merged = Array.from(currentMap.values());
-            setStore(merged);
-            setLocalData(channel, merged);
-            if (subscribers[channel]) {
-              subscribers[channel].forEach((cb) => cb(merged));
-            }
+        const cloudItems = [];
+        if (snapshot && snapshot.docs) {
+          snapshot.docs.forEach((d) => cloudItems.push({ id: d.id, ...d.data() }));
+        }
+
+        // For members: merge cloud records with initial committee list
+        if (channel === 'members') {
+          const map = new Map(INITIAL_MEMBERS.map((m) => [m.id, m]));
+          cloudItems.forEach((item) => map.set(item.id, item));
+          const merged = Array.from(map.values());
+          setStore(merged);
+          setLocalData(channel, merged);
+          if (subscribers[channel]) {
+            subscribers[channel].forEach((cb) => {
+              try { cb(merged); } catch (e) { console.error(e); }
+            });
+          }
+        } else {
+          // Cloud Firestore is authoritative source of truth:
+          // Deletions in Firestore automatically remove items from local memory
+          const sorted = cloudItems.sort((a, b) => {
+            const timeA = new Date(a.createdAt || a.timestamp || a.date || a.publishedAt || 0).getTime();
+            const timeB = new Date(b.createdAt || b.timestamp || b.date || b.publishedAt || 0).getTime();
+            return timeB - timeA;
+          });
+          setStore(sorted);
+          setLocalData(channel, sorted);
+          if (subscribers[channel]) {
+            subscribers[channel].forEach((cb) => {
+              try { cb(sorted); } catch (e) { console.error(e); }
+            });
           }
         }
-      }, () => {
-        // Fallback gracefully without throwing
+      }, (err) => {
+        console.warn(`Firestore real-time listener info on ${name}:`, err.message);
       });
     });
   } catch (e) {
-    // Graceful offline fallback
+    console.warn('Firestore cloud listener init:', e);
   }
 }
 
@@ -221,7 +250,8 @@ export async function saveMember(member) {
     };
     membersStore[existingIdx] = updated;
     notify('members', [...membersStore]);
-    syncToFirestore('iei_members', updated.id, updated, true);
+    await syncToFirestore('iei_members', updated.id, updated, true);
+    await syncToFirestore('iei_users', updated.id, updated, true);
 
     recordActivity({
       action: AUDIT_ACTIONS.MEMBER_ROLE_CHANGED,
@@ -247,7 +277,8 @@ export async function saveMember(member) {
     };
     membersStore.unshift(newMember);
     notify('members', [...membersStore]);
-    syncToFirestore('iei_members', newMember.id, newMember);
+    await syncToFirestore('iei_members', newMember.id, newMember);
+    await syncToFirestore('iei_users', newMember.id, newMember);
 
     recordActivity({
       action: AUDIT_ACTIONS.MEMBER_CREATED,
@@ -262,11 +293,89 @@ export async function saveMember(member) {
   }
 }
 
+/**
+ * Update User Profile with Central Database Synchronization
+ * Synchronizes personal profile changes to Firestore and reflects across all connected dashboards.
+ * If Chairman Sriman Narayana Moorthy or Geethalakshmi updates their profile,
+ * also synchronizes their phone and name to the public homepage contacts.
+ */
+export async function updateUserProfile(userId, profileUpdates, author = null) {
+  const memberIdx = membersStore.findIndex((m) => m.id === userId);
+  if (memberIdx < 0) {
+    throw new Error(`User with ID ${userId} not found in committee directory.`);
+  }
+
+  const existing = membersStore[memberIdx];
+  const updated = {
+    ...existing,
+    ...profileUpdates,
+    updatedAt: new Date().toISOString()
+  };
+
+  // 1. Commit directly to Firestore central database
+  await syncToFirestore('iei_members', userId, updated, true);
+  await syncToFirestore('iei_users', userId, updated, true);
+
+  // 2. Update local state and notify subscribers
+  membersStore[memberIdx] = updated;
+  notify('members', [...membersStore]);
+
+  // 3. Synchronize public homepage contact details if user is a chapter chairperson
+  const isSriman = (updated.name || '').includes('Sriman') || updated.phone === '8015803274';
+  const isGeetha = (updated.name || '').includes('Geetha') || updated.phone === '9884633809';
+  if (isSriman || isGeetha) {
+    try {
+      const publicConf = await getPublicProfileConfig();
+      if (publicConf && Array.isArray(publicConf.contacts)) {
+        const updatedContacts = publicConf.contacts.map((c) => {
+          if (isSriman && (c.phone === '8015803274' || (c.name && c.name.includes('Sriman')))) {
+            return {
+              ...c,
+              name: updated.name,
+              phone: updated.phone || c.phone,
+              displayPhone: updated.phone ? `+91 ${updated.phone}` : c.displayPhone,
+              email: updated.email || c.email
+            };
+          }
+          if (isGeetha && (c.phone === '9884633809' || (c.name && c.name.includes('Geetha')))) {
+            return {
+              ...c,
+              name: updated.name,
+              phone: updated.phone || c.phone,
+              displayPhone: updated.phone ? `+91 ${updated.phone}` : c.displayPhone,
+              email: updated.email || c.email
+            };
+          }
+          return c;
+        });
+        await savePublicProfileConfig({ contacts: updatedContacts }, author || updated);
+      }
+    } catch (e) {
+      console.warn('Public contact sync error:', e);
+    }
+  }
+
+  // 4. Record in System Activity Console
+  recordActivity({
+    actor: author || updated,
+    action: AUDIT_ACTIONS.MEMBER_ROLE_CHANGED,
+    module: AUDIT_MODULES.MEMBERS,
+    status: 'SUCCESS',
+    details: `Profile updated for ${updated.name} (${updated.role}). Fields: ${Object.keys(profileUpdates).join(', ')}.`,
+    targetId: userId,
+    previousValues: existing,
+    newValues: profileUpdates
+  });
+
+  return updated;
+}
+
 export async function deleteMember(id) {
   const target = membersStore.find((m) => m.id === id);
   membersStore = membersStore.filter((m) => m.id !== id);
   notify('members', [...membersStore]);
-  syncDeleteFromFirestore('iei_members', id);
+  await syncDeleteFromFirestore('iei_members', id);
+  await syncDeleteFromFirestore('iei_users', id);
 
   recordActivity({
     action: AUDIT_ACTIONS.MEMBER_STATUS_CHANGED,
@@ -297,7 +406,7 @@ export async function createTask(taskData) {
   };
   tasksStore.unshift(newTask);
   notify('tasks', [...tasksStore]);
-  syncToFirestore('iei_tasks', newTask.id, newTask);
+  await syncToFirestore('iei_tasks', newTask.id, newTask);
 
   // Record audit trail
   recordActivity({
@@ -327,7 +436,7 @@ export async function updateTask(id, updates) {
   if (idx >= 0) {
     tasksStore[idx] = { ...tasksStore[idx], ...updates, updatedAt: new Date().toISOString() };
     notify('tasks', [...tasksStore]);
-    syncToFirestore('iei_tasks', id, updates, true);
+    await syncToFirestore('iei_tasks', id, updates, true);
     return tasksStore[idx];
   }
   return null;
@@ -337,7 +446,7 @@ export async function deleteTask(id) {
   const target = tasksStore.find((t) => t.id === id);
   tasksStore = tasksStore.filter((t) => t.id !== id);
   notify('tasks', [...tasksStore]);
-  syncDeleteFromFirestore('iei_tasks', id);
+  await syncDeleteFromFirestore('iei_tasks', id);
 
   recordActivity({
     action: AUDIT_ACTIONS.WORK_TASK_DELETED,
@@ -363,7 +472,7 @@ export async function addTaskProgressUpdate(taskId, updateMessage, author) {
     task.status = 'In Progress';
     task.updatedAt = new Date().toISOString();
     notify('tasks', [...tasksStore]);
-    syncToFirestore('iei_tasks', taskId, { updates: task.updates, status: task.status, updatedAt: task.updatedAt }, true);
+    await syncToFirestore('iei_tasks', taskId, { updates: task.updates, status: task.status, updatedAt: task.updatedAt }, true);
     return task;
   }
 }
@@ -387,7 +496,7 @@ export async function createCommunityUpdate({ author, content, imageUrl, attachm
   };
   updatesStore.unshift(newUpdate);
   notify('updates', [...updatesStore]);
-  syncToFirestore('iei_updates', newUpdate.id, newUpdate);
+  await syncToFirestore('iei_updates', newUpdate.id, newUpdate);
 
   // Record audit trail
   recordActivity({
@@ -445,7 +554,7 @@ export async function createEvent(eventData, author = null) {
   };
   eventsStore.unshift(newEvent);
   notify('events', [...eventsStore]);
-  syncToFirestore('iei_events', newEvent.id, newEvent);
+  await syncToFirestore('iei_events', newEvent.id, newEvent);
 
   // Record audit trail
   recordActivity({
@@ -496,7 +605,7 @@ export async function updateEvent(id, updates) {
   if (idx >= 0) {
     eventsStore[idx] = { ...eventsStore[idx], ...updates };
     notify('events', [...eventsStore]);
-    syncToFirestore('iei_events', id, updates, true);
+    await syncToFirestore('iei_events', id, updates, true);
 
     recordActivity({
       action: AUDIT_ACTIONS.EVENT_UPDATED,
@@ -510,6 +619,21 @@ export async function updateEvent(id, updates) {
     return eventsStore[idx];
   }
   return null;
+}
+
+export async function deleteEvent(id) {
+  const target = eventsStore.find((e) => e.id === id);
+  eventsStore = eventsStore.filter((e) => e.id !== id);
+  notify('events', [...eventsStore]);
+  await syncDeleteFromFirestore('iei_events', id);
+
+  recordActivity({
+    action: AUDIT_ACTIONS.EVENT_DELETED,
+    module: AUDIT_MODULES.EVENTS,
+    status: 'SUCCESS',
+    details: `Official meeting/event "${target?.title || id}" deleted from register.`,
+    targetId: id
+  });
 }
 
 // --- ATTENDANCE (Strictly for Committee Meetings and Official Events only) ---
@@ -535,7 +659,7 @@ export async function recordEventAttendance({ eventId, eventTitle, category, dat
 
   attendanceStore.unshift(newAttendance);
   notify('attendance', [...attendanceStore]);
-  syncToFirestore('iei_attendance', newAttendance.id, newAttendance);
+  await syncToFirestore('iei_attendance', newAttendance.id, newAttendance);
 
   // Record audit trail
   recordActivity({
@@ -554,7 +678,7 @@ export async function recordEventAttendance({ eventId, eventTitle, category, dat
     eventsStore[evIdx].hasAttendanceRecord = true;
     eventsStore[evIdx].attendanceId = newAttendance.id;
     notify('events', [...eventsStore]);
-    syncToFirestore('iei_events', eventId, { hasAttendanceRecord: true, attendanceId: newAttendance.id }, true);
+    await syncToFirestore('iei_events', eventId, { hasAttendanceRecord: true, attendanceId: newAttendance.id }, true);
   }
 
   return newAttendance;
@@ -578,7 +702,7 @@ export async function createAnnouncement({ title, priority, content, attachmentN
   };
   announcementsStore.unshift(newAnn);
   notify('announcements', [...announcementsStore]);
-  syncToFirestore('iei_announcements', newAnn.id, newAnn);
+  await syncToFirestore('iei_announcements', newAnn.id, newAnn);
 
   // Notify all members
   await createNotification({
@@ -590,6 +714,21 @@ export async function createAnnouncement({ title, priority, content, attachmentN
   });
 
   return newAnn;
+}
+
+export async function deleteAnnouncement(id) {
+  const target = announcementsStore.find((a) => a.id === id);
+  announcementsStore = announcementsStore.filter((a) => a.id !== id);
+  notify('announcements', [...announcementsStore]);
+  await syncDeleteFromFirestore('iei_announcements', id);
+
+  recordActivity({
+    action: AUDIT_ACTIONS.ANNOUNCEMENT_DELETED,
+    module: AUDIT_MODULES.ANNOUNCEMENTS,
+    status: 'SUCCESS',
+    details: `Official circular/announcement "${target?.title || id}" removed.`,
+    targetId: id
+  });
 }
 
 // --- CERTIFICATES & ACHIEVEMENTS ---
@@ -605,6 +744,7 @@ export async function createCertificate(certData) {
   };
   certificatesStore.unshift(newCert);
   notify('certificates', [...certificatesStore]);
+  await syncToFirestore('iei_certificates', newCert.id, newCert);
   return newCert;
 }
 
@@ -620,6 +760,7 @@ export async function createAchievement(achData) {
   };
   achievementsStore.unshift(newAch);
   notify('achievements', [...achievementsStore]);
+  await syncToFirestore('iei_achievements', newAch.id, newAch);
   return newAch;
 }
 
@@ -642,6 +783,7 @@ export async function createNotification(notifData) {
   };
   notificationsStore.unshift(newNotif);
   notify('notifications', [...notificationsStore]);
+  await syncToFirestore('iei_notifications', newNotif.id, newNotif);
   return newNotif;
 }
 
@@ -650,15 +792,38 @@ export async function markNotificationAsRead(notifId) {
   if (idx >= 0) {
     notificationsStore[idx].read = true;
     notify('notifications', [...notificationsStore]);
+    await syncToFirestore('iei_notifications', notifId, { read: true }, true);
   }
 }
 
 export async function markAllNotificationsAsRead(userId, userRole) {
   notificationsStore = notificationsStore.map((n) => {
     if (n.recipientId === 'all' || n.recipientId === userId || n.recipientRole === userRole) {
+      if (!n.read) {
+        syncToFirestore('iei_notifications', n.id, { read: true }, true).catch(() => {});
+      }
       return { ...n, read: true };
     }
     return n;
   });
   notify('notifications', [...notificationsStore]);
 }
+
+// Ensure initial institutional committee records are seeded to Cloud Firestore
+export async function ensureCloudSeeded() {
+  if (!db) return;
+  try {
+    const memSnap = await getDocs(collection(db, 'iei_members'));
+    if (memSnap.empty) {
+      console.log('Seeding initial committee directory to Cloud Firestore...');
+      for (const m of INITIAL_MEMBERS) {
+        await syncToFirestore('iei_members', m.id, m);
+      }
+    }
+  } catch (err) {
+    console.warn('Cloud seeding check notice:', err.message);
+  }
+}
+
+// Automatically invoke cloud seeding check
+ensureCloudSeeded().catch(() => {});

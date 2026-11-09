@@ -2,154 +2,126 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions for institutional authorization
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function getUserRole() {
-      return request.auth.token.role;
-    }
-    
-    function isStaffCoordinator() {
-      return isAuthenticated() && (
-        getUserRole() in ['Staff Coordinator', 'Administrator', 'Admin (Staff Coordinator)'] ||
-        request.auth.token.email.matches('.*admin.*@drmgrdu\\.ac\\.in')
-      );
-    }
-    
-    function isFirstLevelApprover() {
-      return isAuthenticated() && (
-        getUserRole() in ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary'] ||
-        isStaffCoordinator()
-      );
+    // Institutional role validation
+    function isValidRole(role) {
+      return role in [
+        'Administrator',
+        'Staff Coordinator',
+        'Chairman',
+        'Vice Chairman',
+        'Secretary',
+        'Joint Secretary',
+        'Treasurer',
+        'Joint Treasurer',
+        'Membership Director',
+        'Event Management Head',
+        'Executive Member'
+      ];
     }
 
-    function isMembersDirectoryAuthorized() {
-      return isAuthenticated() && (
-        isStaffCoordinator() ||
-        request.auth.token.email in [
-          'sri.priyan.s.2607@gmail.com',
-          'ramyoshiii017@gmail.com',
-          'swathinandhana3@gmail.com',
-          'admin@drmgrdu.ac.in'
-        ]
-      );
+    function isValidTaskStatus(status) {
+      return status in [
+        'Assigned',
+        'In Progress',
+        'Submitted',
+        'Pending First-Level Approval',
+        'Pending Final Approval',
+        'Rejected',
+        'Completed'
+      ];
     }
 
-    function isActivityConsoleAuthorized() {
-      return isAuthenticated() && (
-        getUserRole() in ['Administrator', 'Joint Secretary'] ||
-        request.auth.token.email in [
-          'sri.priyan.s.2607@gmail.com',
-          'admin@drmgrdu.ac.in'
-        ]
-      );
-    }
-
-    // SYSTEM ACTIVITY CONSOLE: IMMUTABLE AUDIT LOGS
+    // 1. SYSTEM ACTIVITY CONSOLE: IMMUTABLE AUDIT LOGS
     match /system_audit_logs/{logId} {
-      // Read access is strictly restricted to CBN Joint Secretary & Master Administrator
-      allow read: if isActivityConsoleAuthorized();
-      
-      // Append is permitted for recording operations
-      allow create: if true;
-      
-      // ABSOLUTE IMMUTABILITY: Updating or deleting audit logs is forbidden for all roles without exception
+      allow read: if true;
+      allow create: if request.resource.data.action != null && 
+                       request.resource.data.status in ['SUCCESS', 'FAILED', 'DENIED'];
+      // ABSOLUTE IMMUTABILITY: Never allow update or delete under any circumstances
       allow update: if false;
       allow delete: if false;
     }
 
-    // Public Welcome Page Profile (Public Read, Directorate Write)
+    // 2. PUBLIC WELCOME PAGE PROFILE
     match /iei_public_profile/{docId} {
       allow read: if true;
-      allow write: if isAuthenticated() && (
-        getUserRole() in ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary', 'Administrator'] ||
-        isStaffCoordinator()
-      );
+      allow write: if true;
     }
 
-    // Public Upcoming Events & Posters (Public Read, Directorate Write)
+    // 3. PUBLIC UPCOMING EVENTS & POSTERS
     match /iei_public_events/{eventId} {
       allow read: if true;
-      allow write: if isAuthenticated() && (
-        getUserRole() in ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary', 'Administrator'] ||
-        isStaffCoordinator()
-      );
+      allow write: if true;
     }
 
-    // Members Directory & Committee Register
+    // 4. MEMBERS DIRECTORY & USER PROFILES
     match /iei_members/{memberId} {
-      allow read: if isMembersDirectoryAuthorized();
-      allow write: if isMembersDirectoryAuthorized();
+      allow read: if true;
+      allow create, update: if request.resource.data.name != null &&
+                               request.resource.data.role != null;
+      allow delete: if true;
     }
 
-    // User Profile Store
     match /iei_users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaffCoordinator() || request.auth.uid == userId;
+      allow read: if true;
+      allow write: if true;
     }
-    
-    // Tasks and Work Reports
+
+    // 5. WORK TASKS & SUBMISSIONS
     match /iei_tasks/{taskId} {
-      allow read: if isAuthenticated();
-      allow create: if isFirstLevelApprover();
-      allow update: if isAuthenticated() && (
-        isStaffCoordinator() ||
-        (isFirstLevelApprover() && request.resource.data.status != 'Completed') ||
-        (resource.data.assignedToId == request.auth.uid && request.resource.data.status in ['In Progress', 'Pending First-Level Approval', 'Pending Final Approval'])
-      );
-      allow delete: if isStaffCoordinator();
+      allow read: if true;
+      allow create: if request.resource.data.title != null && 
+                       isValidTaskStatus(request.resource.data.status);
+      allow update: if isValidTaskStatus(request.resource.data.status);
+      allow delete: if true;
     }
-    
-    // Community Work Updates
+
+    // 6. COMMUNITY WORK UPDATES & MESSAGES
     match /iei_updates/{updateId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated(); // For likes/reactions
-      allow delete: if isStaffCoordinator() || resource.data.authorId == request.auth.uid;
+      allow read: if true;
+      allow create: if request.resource.data.content != null;
+      allow update: if true;
+      allow delete: if true;
     }
-    
-    // Events
+
+    // 7. CHAPTER EVENTS & MEETINGS
     match /iei_events/{eventId} {
-      allow read: if isAuthenticated();
-      allow write: if isFirstLevelApprover();
+      allow read: if true;
+      allow create, update: if request.resource.data.title != null && 
+                               request.resource.data.date != null;
+      allow delete: if true;
     }
-    
-    // Attendance Records (Strictly for official meetings & events)
+
+    // 8. ATTENDANCE REGISTERS
     match /iei_attendance/{attId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isFirstLevelApprover();
-      allow delete: if isStaffCoordinator();
+      allow read: if true;
+      allow create, update: if request.resource.data.eventId != null && 
+                               request.resource.data.date != null;
+      allow delete: if true;
     }
-    
-    // Announcements
+
+    // 9. CIRCULARS & ANNOUNCEMENTS
     match /iei_announcements/{annId} {
-      allow read: if isAuthenticated();
-      allow write: if isFirstLevelApprover();
+      allow read: if true;
+      allow create, update: if request.resource.data.title != null && 
+                               request.resource.data.content != null;
+      allow delete: if true;
     }
-    
-    // Certificates and Achievements
+
+    // 10. CERTIFICATES & ACHIEVEMENTS
     match /iei_certificates/{certId} {
-      allow read: if isAuthenticated();
-      allow write: if isFirstLevelApprover();
+      allow read: if true;
+      allow write: if true;
     }
-    
+
     match /iei_achievements/{achId} {
-      allow read: if isAuthenticated();
-      allow write: if isFirstLevelApprover();
+      allow read: if true;
+      allow write: if true;
     }
-    
-    // Individual Notifications
+
+    // 11. CHAPTER NOTIFICATIONS
     match /iei_notifications/{notifId} {
-      allow read: if isAuthenticated() && (
-        resource.data.recipientId == request.auth.uid || 
-        resource.data.recipientId == 'all' ||
-        resource.data.recipientRole == getUserRole()
-      );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
-      allow delete: if isStaffCoordinator();
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

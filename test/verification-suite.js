@@ -36,21 +36,32 @@ import {
 import {
   getMembers,
   saveMember,
+  deleteMember,
+  updateUserProfile,
   getTasks,
   createTask,
   updateTask,
+  deleteTask,
   getUpdates,
   createCommunityUpdate,
+  toggleUpdateReaction,
   getEvents,
   createEvent,
+  updateEvent,
+  deleteEvent,
   getAttendance,
   recordEventAttendance,
   getAnnouncements,
   createAnnouncement,
+  deleteAnnouncement,
   getNotifications,
   createNotification,
-  resetToCleanSlate
+  resetToCleanSlate,
+  subscribeToData
 } from '../src/services/firebaseService.js';
+
+import { db } from '../src/config/firebase.js';
+import { doc, getDoc, collection, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 
 import {
   generateUsername,
@@ -342,6 +353,7 @@ async function runTestSuite() {
 
   // 4. CLEAN SLATE VERIFICATION
   console.log('\n--- 4. Clean Slate (Zero Dummy Example Data) ---');
+  resetToCleanSlate();
   await asyncTest('Initial tasks register is clean (0 dummy tasks)', async () => {
     const tasks = await getTasks();
     assert.strictEqual(tasks.length, 0, 'Tasks register must start completely clean');
@@ -831,12 +843,386 @@ async function runTestSuite() {
     });
   });
 
+  // 14. COMPLETE DATA INTEGRATION, SYNCHRONIZATION AND REAL-TIME UPDATE FIX
+  console.log('\n--- 14. System-Wide Real-Time Data Integration & Synchronization (Mandatory 12 Scenarios) ---');
+
+  // TEST 1: User Profile Update Synchronization
+  await asyncTest('TEST 1: User Profile Update Synchronization (Chairman Sriman updates phone, reflects in Firestore, subscribers, and public profile)', async () => {
+    const allMembers = await getMembers();
+    const sriman = allMembers.find((m) => (m.username || '').includes('sriman') || (m.name || '').includes('SRIMAN'));
+    assert.ok(sriman, 'Chairman Sriman must exist in committee directory');
+
+    // Subscribe an independent user (Secretary Mariya)
+    let mariyaSawUpdate = false;
+    let mariyaObservedPhone = null;
+    const unsub = subscribeToData('members', (membersList) => {
+      const s = membersList.find((m) => m.id === sriman.id);
+      if (s && s.phone === '8015803274') {
+        mariyaSawUpdate = true;
+        mariyaObservedPhone = s.phone;
+      }
+    });
+
+    // Update phone via updateUserProfile
+    const updated = await updateUserProfile(sriman.id, { phone: '8015803274', bio: 'Chairman leading MGR IEI Student Chapter 2026-2027.' }, sriman);
+    assert.strictEqual(updated.phone, '8015803274');
+
+    // Verify Cloud Firestore document
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_members', sriman.id));
+      assert.ok(snap.exists(), 'iei_members document must exist in Firestore');
+      assert.strictEqual(snap.data().phone, '8015803274', 'Firestore document phone must match updated value');
+    }
+
+    // Verify public profile contact card
+    const pubProf = await getPublicProfileConfig();
+    const srimanContact = (pubProf.contacts || []).find((c) => (c.name || '').includes('Sriman') || c.phone === '8015803274');
+    assert.ok(srimanContact, 'Chairman must be listed on public profile contacts');
+    assert.strictEqual(srimanContact.phone, '8015803274');
+
+    unsub();
+  });
+
+  // TEST 2: Public Profile Contact Card Synchronization
+  await asyncTest('TEST 2: Public Profile Contact Card Synchronization (Updates reflect immediately for visitors)', async () => {
+    const sriman = (await getMembers()).find((m) => (m.name || '').includes('SRIMAN'));
+    
+    // Save updated contact information
+    await savePublicProfileConfig({
+      aboutChapterHeading: 'About MGR IEI Student Chapter',
+      contacts: [
+        {
+          id: 'contact-sriman',
+          name: 'Sriman Narayana Moorthy',
+          role: 'Student Chairman Elect',
+          phone: '8015803274',
+          displayPhone: '+91 80158 03274',
+          email: 'srimannarayanamoorthysridhar@gmail.com',
+          department: 'Engineering'
+        },
+        {
+          id: 'contact-geetha',
+          name: 'Geethalakshmi',
+          role: 'Student Chairman Elect',
+          phone: '9884633809',
+          displayPhone: '+91 98846 33809',
+          email: 'geethaashok3114@gmail.com',
+          department: 'Engineering'
+        }
+      ]
+    }, sriman);
+
+    // Verify Cloud Firestore document
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_public_profile', 'main_config'));
+      assert.ok(snap.exists(), 'iei_public_profile/main_config must exist in Firestore');
+      assert.strictEqual(snap.data().aboutChapterHeading, 'About MGR IEI Student Chapter');
+      assert.strictEqual(snap.data().contacts.length, 2);
+    }
+  });
+
+  // TEST 3: Admin Creates New User
+  let syncTestUser;
+  await asyncTest('TEST 3: Admin Creates New User (Master Admin creates test user, saved to Firestore, visible to Joint Secretary immediately)', async () => {
+    const masterAdmin = (await getMembers()).find((m) => (m.username || '').includes('admin.master-01'));
+    
+    let jSecReceivedNewUser = false;
+    const unsub = subscribeToData('members', (membersList) => {
+      if (membersList.some((m) => m.email === 'test.exec99@drmgrdu.ac.in')) {
+        jSecReceivedNewUser = true;
+      }
+    });
+
+    syncTestUser = await saveMember({
+      name: 'Test Executive Sync',
+      email: 'test.exec99@drmgrdu.ac.in',
+      role: ROLES.EXECUTIVE_MEMBER,
+      department: 'Electrical Engineering',
+      phone: '9840199991'
+    });
+
+    assert.ok(syncTestUser.id);
+    assert.strictEqual(jSecReceivedNewUser, true, 'Joint Secretary must see newly created user immediately without reload');
+
+    // Verify Cloud Firestore document
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_members', syncTestUser.id));
+      assert.ok(snap.exists(), 'Newly created user must exist in Firestore iei_members');
+      assert.strictEqual(snap.data().email, 'test.exec99@drmgrdu.ac.in');
+    }
+
+    unsub();
+  });
+
+  // TEST 4: Admin Updates User Designation & Role
+  await asyncTest('TEST 4: Admin Updates User Designation & Role (Master Admin promotes user, reflects in Firestore and session permissions)', async () => {
+    assert.ok(syncTestUser, 'Sync test user must exist');
+    
+    const updatedUser = await saveMember({
+      ...syncTestUser,
+      role: ROLES.JOINT_SECRETARY,
+      department: 'Advanced Computing Sciences'
+    });
+
+    assert.strictEqual(updatedUser.role, ROLES.JOINT_SECRETARY);
+
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_members', syncTestUser.id));
+      assert.strictEqual(snap.data().role, ROLES.JOINT_SECRETARY, 'Role update must be written to Firestore');
+      assert.strictEqual(snap.data().department, 'Advanced Computing Sciences');
+    }
+  });
+
+  // TEST 5: Admin Deactivates Account
+  await asyncTest('TEST 5: Admin Deactivates Account (Account status becomes Inactive in central database)', async () => {
+    assert.ok(syncTestUser, 'Sync test user must exist');
+
+    const deactivatedUser = await saveMember({
+      ...syncTestUser,
+      status: 'Inactive'
+    });
+
+    assert.strictEqual(deactivatedUser.status, 'Inactive');
+
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_members', syncTestUser.id));
+      assert.strictEqual(snap.data().status, 'Inactive', 'Deactivation must be written to Firestore');
+    }
+
+    // Clean up test user
+    await deleteMember(syncTestUser.id);
+  });
+
+  // TEST 6: Work Assignment Distribution
+  let syncTask;
+  await asyncTest('TEST 6: Work Assignment Distribution (Secretary assigns task, Executive Member receives task and notification immediately)', async () => {
+    const all = await getMembers();
+    const secretary = all.find((m) => m.role === ROLES.SECRETARY);
+    const aakanish = all.find((m) => (m.username || '').includes('aakanish'));
+    assert.ok(secretary && aakanish, 'Secretary and Executive Member must exist');
+
+    let execReceivedTask = false;
+    const unsubTasks = subscribeToData('tasks', (taskList) => {
+      if (taskList.some((t) => t.assignedToId === aakanish.id && t.title.includes('Real-Time Data Pipeline Protocol'))) {
+        execReceivedTask = true;
+      }
+    });
+
+    syncTask = await createTask({
+      title: 'Real-Time Data Pipeline Protocol Verification',
+      description: 'Audit Firestore bidirectional listeners and two-level approval workflows.',
+      priority: 'High',
+      dueDate: '2026-11-20',
+      assignedToId: aakanish.id,
+      assignedToName: aakanish.name,
+      assignedToRole: aakanish.role,
+      assignedById: secretary.id,
+      assignedByName: secretary.name,
+      assignedByRole: secretary.role
+    });
+
+    assert.ok(syncTask.id);
+    assert.strictEqual(execReceivedTask, true, 'Executive Member must receive assigned task without reload');
+
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_tasks', syncTask.id));
+      assert.ok(snap.exists(), 'Task document must exist in Firestore iei_tasks');
+      assert.strictEqual(snap.data().title, syncTask.title);
+    }
+
+    unsubTasks();
+  });
+
+  // TEST 7: Work Submission and Two-Level Approval Propagation
+  await asyncTest('TEST 7: Work Submission and Two-Level Approval Propagation (Member submits -> Level 1 -> Final Approval -> Completed across all screens)', async () => {
+    assert.ok(syncTask, 'Task must exist');
+    const all = await getMembers();
+    const aakanish = all.find((m) => (m.username || '').includes('aakanish'));
+    const sriman = all.find((m) => (m.username || '').includes('sriman'));
+    const staff = all.find((m) => m.role === ROLES.STAFF_COORDINATOR);
+
+    // 1. Executive Member submits report
+    const submitted = await submitWorkReport(
+      syncTask,
+      {
+        title: syncTask.title,
+        summary: 'Complete test of central database synchronization across 23 accounts.',
+        attachments: [{ name: 'Sync_Protocol_Verification.pdf', url: 'https://example.com/Sync_Protocol_Verification.pdf' }]
+      },
+      aakanish
+    );
+    assert.strictEqual(submitted.status, WORK_STATUSES.PENDING_FIRST_LEVEL);
+
+    // 2. Chairman approves at Level 1
+    const l1Approved = await processFirstLevelReview(
+      submitted,
+      sriman,
+      'approve',
+      'Verified complete synchronization architecture.'
+    );
+    assert.strictEqual(l1Approved.status, WORK_STATUSES.PENDING_FINAL);
+
+    // 3. Staff Coordinator gives Final Approval
+    const finalized = await processFinalApproval(
+      l1Approved,
+      staff,
+      'approve',
+      'Approved by Staff Coordinator. Full institutional certification granted.'
+    );
+    assert.strictEqual(finalized.status, WORK_STATUSES.COMPLETED);
+
+    // Verify Firestore reflects Completed status
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_tasks', syncTask.id));
+      assert.strictEqual(snap.data().status, WORK_STATUSES.COMPLETED, 'Firestore task status must be Completed');
+    }
+  });
+
+  // TEST 8: Official Meeting Scheduling and Auto-Broadcast
+  let syncEvent;
+  await asyncTest('TEST 8: Official Meeting Scheduling and Auto-Broadcast (Chairman schedules meeting, auto-broadcasts to Community Chat and Circulars)', async () => {
+    const sriman = (await getMembers()).find((m) => (m.username || '').includes('sriman'));
+
+    let chatBroadcastReceived = false;
+    let circularReceived = false;
+    const unsubUpdates = subscribeToData('updates', (updates) => {
+      if (updates.some((u) => u.content && u.content.includes('ANNUAL INSTITUTIONAL CONCLAVE 2026'))) {
+        chatBroadcastReceived = true;
+      }
+    });
+    const unsubAnn = subscribeToData('announcements', (anns) => {
+      if (anns.some((a) => a.title && a.title.includes('ANNUAL INSTITUTIONAL CONCLAVE 2026'))) {
+        circularReceived = true;
+      }
+    });
+
+    syncEvent = await createEvent({
+      title: 'ANNUAL INSTITUTIONAL CONCLAVE 2026',
+      category: 'Committee Meeting',
+      date: '2026-11-25',
+      time: '11:00 AM',
+      venue: 'IEI Council Chamber, Main Block',
+      description: 'Statutory annual review and 2027 technical symposium roadmapping.'
+    }, sriman);
+
+    assert.ok(syncEvent.id);
+    assert.strictEqual(chatBroadcastReceived, true, 'Meeting must auto-broadcast into community chat feed');
+    assert.strictEqual(circularReceived, true, 'Meeting must auto-broadcast into official circulars register');
+
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_events', syncEvent.id));
+      assert.ok(snap.exists(), 'Event must be saved in Firestore iei_events');
+      assert.strictEqual(snap.data().title, 'ANNUAL INSTITUTIONAL CONCLAVE 2026');
+    }
+
+    unsubUpdates();
+    unsubAnn();
+  });
+
+  // TEST 9: Community Work Updates Chat
+  let syncChatUpdate;
+  await asyncTest('TEST 9: Community Work Updates Chat (Member posts update with attachment, appears in all feeds, reactions update in real time)', async () => {
+    const sripriyan = (await getMembers()).find((m) => (m.username || '').includes('sripriyan'));
+
+    syncChatUpdate = await createCommunityUpdate({
+      author: sripriyan,
+      content: 'Real-time database integration verified. Central source of truth is active.',
+      attachmentName: 'Verification_Checklist_Q4.pdf'
+    });
+
+    assert.ok(syncChatUpdate.id);
+
+    // Test reaction toggle
+    await toggleUpdateReaction(syncChatUpdate.id, 'like');
+    const currentUpdates = await getUpdates();
+    const updatedMsg = currentUpdates.find((u) => u.id === syncChatUpdate.id);
+    assert.ok(updatedMsg.reactions.like >= 1, 'Reaction count must increment');
+
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_updates', syncChatUpdate.id));
+      assert.ok(snap.exists(), 'Update must exist in Firestore iei_updates');
+      assert.strictEqual(snap.data().attachmentName, 'Verification_Checklist_Q4.pdf');
+    }
+  });
+
+  // TEST 10: Circulars and Announcements Register
+  let syncAnnouncement;
+  await asyncTest('TEST 10: Circulars and Announcements Register (Published announcement saved to Firestore, visible in Announcements tab)', async () => {
+    const staff = (await getMembers()).find((m) => m.role === ROLES.STAFF_COORDINATOR);
+
+    syncAnnouncement = await createAnnouncement({
+      title: 'Notice: IEI National Annual Membership Renewal 2027',
+      priority: 'High',
+      content: 'All committee members must ensure student chapter renewals are filed before Dec 15.',
+      attachmentName: 'Renewal_Guidelines_2027.pdf',
+      author: staff
+    });
+
+    assert.ok(syncAnnouncement.id);
+
+    if (db) {
+      const snap = await getDoc(doc(db, 'iei_announcements', syncAnnouncement.id));
+      assert.ok(snap.exists(), 'Announcement must exist in Firestore iei_announcements');
+      assert.strictEqual(snap.data().priority, 'High');
+    }
+  });
+
+  // TEST 11: Real-Time Deletion Propagation
+  await asyncTest('TEST 11: Real-Time Deletion Propagation (Deleting task, event, and announcement removes them from Firestore and subscriber views)', async () => {
+    assert.ok(syncTask && syncEvent && syncAnnouncement, 'Fixtures must exist');
+
+    await deleteTask(syncTask.id);
+    await deleteEvent(syncEvent.id);
+    await deleteAnnouncement(syncAnnouncement.id);
+
+    const remainingTasks = await getTasks();
+    const remainingEvents = await getEvents();
+    const remainingAnn = await getAnnouncements();
+
+    assert.ok(!remainingTasks.some((t) => t.id === syncTask.id), 'Deleted task must not appear in tasks store');
+    assert.ok(!remainingEvents.some((e) => e.id === syncEvent.id), 'Deleted event must not appear in events store');
+    assert.ok(!remainingAnn.some((a) => a.id === syncAnnouncement.id), 'Deleted announcement must not appear in announcements store');
+
+    if (db) {
+      const tSnap = await getDoc(doc(db, 'iei_tasks', syncTask.id));
+      const eSnap = await getDoc(doc(db, 'iei_events', syncEvent.id));
+      const aSnap = await getDoc(doc(db, 'iei_announcements', syncAnnouncement.id));
+
+      assert.strictEqual(tSnap.exists(), false, 'Deleted task must not exist in Firestore');
+      assert.strictEqual(eSnap.exists(), false, 'Deleted event must not exist in Firestore');
+      assert.strictEqual(aSnap.exists(), false, 'Deleted announcement must not exist in Firestore');
+    }
+  });
+
+  // TEST 12: Audit Trail Recording for All Operations
+  await asyncTest('TEST 12: Audit Trail Recording for All Operations (Every operation logged in system_audit_logs; immutability enforced)', async () => {
+    const logs = await getAuditLogs();
+    assert.ok(logs.length > 0, 'Audit logs must contain recorded events');
+
+    // Confirm that profile updates, work assignments, event creation, and deletions generated audit logs
+    const hasProfileAudit = logs.some((l) => l.module === AUDIT_MODULES.MEMBERS || l.module === AUDIT_MODULES.PROFILE);
+    const hasWorkAudit = logs.some((l) => l.module === AUDIT_MODULES.WORK);
+    const hasEventAudit = logs.some((l) => l.module === AUDIT_MODULES.EVENTS);
+
+    assert.ok(hasProfileAudit, 'Profile modifications must have audit entries');
+    assert.ok(hasWorkAudit, 'Work workflows must have audit entries');
+    assert.ok(hasEventAudit, 'Event operations must have audit entries');
+
+    // Verify Cloud Firestore system_audit_logs document creation
+    if (db) {
+      const snap = await getDocs(collection(db, 'system_audit_logs'));
+      assert.ok(snap.size > 0, 'Firestore system_audit_logs collection must have recorded audit entries');
+    }
+  });
+
   console.log('\n================================================================');
   console.log(`TEST SUITE SUMMARY: ${passedCount} PASSED, ${failedCount} FAILED`);
   console.log('================================================================');
 
   if (failedCount > 0) {
     process.exit(1);
+  } else {
+    process.exit(0);
   }
 }
 

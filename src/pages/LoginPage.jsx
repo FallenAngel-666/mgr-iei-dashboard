@@ -57,7 +57,7 @@ export function LoginPage({ onBackToWelcome }) {
           </span>
         </div>
         <div className="text-slate-400 text-[11px] font-medium">
-          MJR IAE DASHBOARD â€¢ Committee Login
+          MGR IEI DASHBOARD • Committee Login
         </div>
       </div>
 
@@ -96,7 +96,7 @@ export function LoginPage({ onBackToWelcome }) {
                   THE INSTITUTION OF ENGINEERS (INDIA)
                 </h2>
                 <p className="text-[10px] font-bold text-amber-600">
-                  MJR IAE DASHBOARD
+                  MGR IEI DASHBOARD
                 </p>
               </div>
             </div>

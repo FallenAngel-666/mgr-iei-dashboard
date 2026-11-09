@@ -6,7 +6,7 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged 
 } from '../config/firebase';
-import { getMembers } from '../services/firebaseService';
+import { getMembers, subscribeToData, updateUserProfile } from '../services/firebaseService';
 import { recordActivity, AUDIT_MODULES, AUDIT_ACTIONS } from '../services/auditService';
 
 const AuthContext = createContext(null);
@@ -34,6 +34,42 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('iei_mgr_active_user');
     }
   }, [currentUser]);
+
+  // Real-time synchronization of active user profile & status from central database
+  useEffect(() => {
+    if (!currentUser?.id && !currentUser?.username) return;
+    const unsub = subscribeToData('members', (members) => {
+      const fresh = members.find((m) => 
+        (currentUser.id && m.id === currentUser.id) || 
+        (currentUser.username && m.username === currentUser.username)
+      );
+      if (fresh) {
+        // Only update if data actually changed to avoid unnecessary re-renders
+        if (
+          fresh.name !== currentUser.name ||
+          fresh.role !== currentUser.role ||
+          fresh.phone !== currentUser.phone ||
+          fresh.email !== currentUser.email ||
+          fresh.status !== currentUser.status ||
+          fresh.avatar !== currentUser.avatar ||
+          fresh.department !== currentUser.department ||
+          fresh.year !== currentUser.year ||
+          fresh.bio !== currentUser.bio
+        ) {
+          setCurrentUser((prev) => prev ? { ...prev, ...fresh } : fresh);
+        }
+      }
+    });
+    return () => unsub();
+  }, [currentUser?.id, currentUser?.username]);
+
+  // Direct user profile update handler (persists to Firestore and synchronizes across all users)
+  async function updateProfile(profileUpdates) {
+    if (!currentUser) throw new Error('No active user session');
+    const updated = await updateUserProfile(currentUser.id, profileUpdates, currentUser);
+    setCurrentUser(updated);
+    return updated;
+  }
 
   // Login handler: accepts either official Username (e.g. sriman.chair-01) OR registered Email
   async function login(usernameOrEmail, password) {
@@ -183,7 +219,8 @@ export function AuthProvider({ children }) {
         authError,
         login,
         logout,
-        resetPassword
+        resetPassword,
+        updateProfile
       }}
     >
       {children}

@@ -87,8 +87,8 @@ export const DEFAULT_PUBLIC_PROFILE = {
   upcomingEvents: []
 };
 
-const PROFILE_STORAGE_KEY = 'iei_public_profile_v2';
-const EVENTS_STORAGE_KEY = 'iei_public_events_v2';
+const PROFILE_STORAGE_KEY = 'iei_public_profile_v4';
+const EVENTS_STORAGE_KEY = 'iei_public_events_v4';
 
 function getLocalData(key, fallback) {
   try {
@@ -164,7 +164,7 @@ function notifyEvents() {
 }
 
 // Background Cloud Sync with Firestore
-if (typeof window !== 'undefined') {
+if (db) {
   try {
     // 1. Sync public profile config doc
     const profileDocRef = doc(db, 'iei_public_profile', 'main_config');
@@ -256,12 +256,15 @@ export async function savePublicProfileConfig(updates, author = null) {
     newValues: updates
   });
 
-  // Async sync to Firestore
-  try {
-    const profileDocRef = doc(db, 'iei_public_profile', 'main_config');
-    await setDoc(profileDocRef, publicProfileStore, { merge: true });
-  } catch (err) {
-    console.warn('Firestore public profile push error (cached offline):', err);
+  // Sync to Firestore central database
+  if (db) {
+    try {
+      const profileDocRef = doc(db, 'iei_public_profile', 'main_config');
+      await setDoc(profileDocRef, publicProfileStore, { merge: true });
+    } catch (err) {
+      console.warn('Firestore public profile push error:', err);
+      throw err;
+    }
   }
 
   return { ...publicProfileStore };
@@ -298,11 +301,14 @@ export async function savePublicUpcomingEvent(eventData, author = null) {
     newValues: { title: newEvent.title, date: newEvent.date, venue: newEvent.venue }
   });
 
-  try {
-    const eventDocRef = doc(db, 'iei_public_events', newEvent.id);
-    await setDoc(eventDocRef, newEvent);
-  } catch (err) {
-    console.warn('Firestore public event push error (cached offline):', err);
+  if (db) {
+    try {
+      const eventDocRef = doc(db, 'iei_public_events', newEvent.id);
+      await setDoc(eventDocRef, newEvent);
+    } catch (err) {
+      console.warn('Firestore public event push error:', err);
+      throw err;
+    }
   }
 
   return newEvent;
@@ -321,10 +327,13 @@ export async function deletePublicUpcomingEvent(eventId) {
     targetId: eventId
   });
 
-  try {
-    const eventDocRef = doc(db, 'iei_public_events', eventId);
-    await deleteDoc(eventDocRef);
-  } catch (err) {
-    console.warn('Firestore public event delete error (cached offline):', err);
+  if (db) {
+    try {
+      const eventDocRef = doc(db, 'iei_public_events', eventId);
+      await deleteDoc(eventDocRef);
+    } catch (err) {
+      console.warn('Firestore public event delete error:', err);
+      throw err;
+    }
   }
 }

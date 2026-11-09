@@ -29,6 +29,8 @@ import {
   getPublicUpcomingEvents, 
   savePublicUpcomingEvent, 
   deletePublicUpcomingEvent,
+  subscribeToPublicProfile,
+  subscribeToPublicEvents,
   DEFAULT_PUBLIC_PROFILE 
 } from '../../services/publicProfileService';
 
@@ -63,6 +65,24 @@ export function ProfileUpdateView() {
 
   useEffect(() => {
     loadData();
+    const unsubProfile = subscribeToPublicProfile((prof) => {
+      setProfile(prof);
+      const lines = Array.isArray(prof.aboutChapterLines) && prof.aboutChapterLines.length === 3
+        ? prof.aboutChapterLines
+        : (prof.aboutChapterContent || '').split('\n').filter(Boolean);
+      if (lines.length >= 3) {
+        setLine1(lines[0] || '');
+        setLine2(lines[1] || '');
+        setLine3(lines[2] || '');
+      }
+    });
+    const unsubEvents = subscribeToPublicEvents((evts) => {
+      setPublicEvents(evts);
+    });
+    return () => {
+      unsubProfile();
+      unsubEvents();
+    };
   }, []);
 
   const loadData = async () => {

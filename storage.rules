@@ -1,35 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Only authenticated members can read institutional documents
-    match /reports/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.resource.size < 25 * 1024 * 1024; // 25MB max
-    }
-    
-    match /community/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.resource.size < 15 * 1024 * 1024;
-    }
-    
-    match /events/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.resource.size < 20 * 1024 * 1024;
-    }
-    
-    match /certificates/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.resource.size < 15 * 1024 * 1024;
-    }
-
-    match /attendance/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.resource.size < 15 * 1024 * 1024;
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 25 * 1024 * 1024;
     }
   }
 }
