@@ -8,11 +8,11 @@ export function PhotoCarousel({ photos = [] }) {
 
   // Fallback default photos if empty
   const activePhotos = Array.isArray(photos) && photos.length > 0 ? photos : [
-    { id: 'p1', url: '/assets/website-logo.png', title: 'Dr. M.G.R. University', caption: 'NAAC A+ Accredited Campus' },
-    { id: 'p2', url: '/assets/apk-logo.png', title: 'IEI Crest', caption: 'Royal Charter 1935' },
-    { id: 'p3', url: '/assets/website-logo.png', title: 'Technical Directorate', caption: 'Student Chapter Initiatives' },
-    { id: 'p4', url: '/assets/apk-logo.png', title: 'Centenary Heritage', caption: 'Advancing Engineering Excellence' },
-    { id: 'p5', url: '/assets/website-logo.png', title: 'Research & Innovation', caption: 'Maduravoyal, Chennai-95' }
+    { id: 'p1', url: '/assets/gallery/gallery-1-best-chapter-award.jpg', title: 'IE(I) Best Students Chapter Award (Engineering) 2026', caption: 'The Institution of Engineers (India) Tamilnadu State Centre Presentation' },
+    { id: 'p2', url: '/assets/gallery/gallery-2-rain26-cultural-fest.jpg', title: 'MGR Cultural Fest RAIN\'26 — Chapter Delegation', caption: 'Dr. M.G.R. Educational and Research Institute Committee Members' },
+    { id: 'p3', url: '/assets/gallery/gallery-3-rain26-valedictory.jpg', title: 'RAIN\'26 Technical Symposium & Brochure Release', caption: 'Executive Chapter Committee with Faculty Coordinators & Dignitaries' },
+    { id: 'p4', url: '/assets/gallery/gallery-4-presidential-felicitation.jpg', title: 'Presidential Felicitation & Institutional Newsletter Launch', caption: 'Presenting Chapter Proceedings to University Leadership' },
+    { id: 'p5', url: '/assets/gallery/gallery-5-official-chapter-emblem.png', title: 'The Institution of Engineers (India) — Established 1920', caption: 'Chartered 1935 • Dr. M.G.R. Student Chapter Division' }
   ];
 
   // Automatic rotation: changes every ONE SECOND (1000ms) continuously in a loop

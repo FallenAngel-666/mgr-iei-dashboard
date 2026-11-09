@@ -28,33 +28,33 @@ export const DEFAULT_PUBLIC_PROFILE = {
   carouselPhotos: [
     {
       id: 'photo-1',
-      url: '/assets/website-logo.png',
-      title: 'Dr. M.G.R. Educational and Research Institute',
-      caption: 'Deemed to be University — NAAC A+ Accredited Campus'
+      url: '/assets/gallery/gallery-1-best-chapter-award.jpg',
+      title: 'IE(I) Best Students Chapter Award (Engineering) 2026',
+      caption: 'The Institution of Engineers (India) Tamilnadu State Centre Presentation'
     },
     {
       id: 'photo-2',
-      url: '/assets/apk-logo.png',
-      title: 'The Institution of Engineers (India)',
-      caption: 'Established 1920 • Incorporated by Royal Charter 1935'
+      url: '/assets/gallery/gallery-2-rain26-cultural-fest.jpg',
+      title: 'MGR Cultural Fest RAIN\'26 — Chapter Delegation',
+      caption: 'Dr. M.G.R. Educational and Research Institute Committee Members'
     },
     {
       id: 'photo-3',
-      url: '/assets/website-logo.png',
-      title: 'MGR IEI Student Chapter Directorate',
-      caption: 'Multidisciplinary Engineering Symposiums & Technical Workshops'
+      url: '/assets/gallery/gallery-3-rain26-valedictory.jpg',
+      title: 'RAIN\'26 Technical Symposium & Brochure Release',
+      caption: 'Executive Chapter Committee with Faculty Coordinators & Dignitaries'
     },
     {
       id: 'photo-4',
-      url: '/assets/apk-logo.png',
-      title: 'IEI Royal Charter Emblem',
-      caption: 'Centenary Heritage in Advancing Engineering Sciences'
+      url: '/assets/gallery/gallery-4-presidential-felicitation.jpg',
+      title: 'Presidential Felicitation & Institutional Newsletter Launch',
+      caption: 'Presenting Chapter Proceedings to University Leadership'
     },
     {
       id: 'photo-5',
-      url: '/assets/website-logo.png',
-      title: 'Technical Innovations & Projects',
-      caption: 'Maduravoyal, Chennai-95, Tamilnadu'
+      url: '/assets/gallery/gallery-5-official-chapter-emblem.png',
+      title: 'The Institution of Engineers (India) — Established 1920',
+      caption: 'Chartered 1935 • Dr. M.G.R. Student Chapter Division'
     }
   ],
 
@@ -87,8 +87,8 @@ export const DEFAULT_PUBLIC_PROFILE = {
   upcomingEvents: []
 };
 
-const PROFILE_STORAGE_KEY = 'iei_public_profile_v4';
-const EVENTS_STORAGE_KEY = 'iei_public_events_v4';
+const PROFILE_STORAGE_KEY = 'iei_public_profile_v5';
+const EVENTS_STORAGE_KEY = 'iei_public_events_v5';
 
 function getLocalData(key, fallback) {
   try {
@@ -126,6 +126,16 @@ function getLocalData(key, fallback) {
 
     if (parsed && parsed.aboutChapterHeading && parsed.aboutChapterHeading.includes('MJR IAE')) {
       parsed.aboutChapterHeading = 'About MGR IEI Student Chapter';
+    }
+
+    // Auto-migrate carousel photos if still using old placeholders
+    if (parsed && Array.isArray(parsed.carouselPhotos)) {
+      const hasPlaceholdersOnly = parsed.carouselPhotos.every((p) => 
+        (p.url || '').includes('website-logo.png') || (p.url || '').includes('apk-logo.png')
+      );
+      if (hasPlaceholdersOnly) {
+        parsed.carouselPhotos = DEFAULT_PUBLIC_PROFILE.carouselPhotos;
+      }
     }
 
     return parsed;
