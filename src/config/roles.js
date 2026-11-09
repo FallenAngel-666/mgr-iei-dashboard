@@ -1,4 +1,6 @@
 export const ROLES = {
+  ADMINISTRATOR: 'Administrator', // Master User / Super Admin who can change anything
+  STAFF_COORDINATOR: 'Staff Coordinator',
   CHAIRMAN: 'Chairman',
   VICE_CHAIRMAN: 'Vice Chairman',
   SECRETARY: 'Secretary',
@@ -7,11 +9,11 @@ export const ROLES = {
   JOINT_TREASURER: 'Joint Treasurer',
   MEMBERSHIP_DIRECTOR: 'Membership Director',
   EVENT_MANAGEMENT_HEAD: 'Event Management Head',
-  EXECUTIVE_MEMBER: 'Executive Member',
-  STAFF_COORDINATOR: 'Admin (Staff Coordinator)'
+  EXECUTIVE_MEMBER: 'Executive Member'
 };
 
 export const ROLE_LIST = [
+  ROLES.ADMINISTRATOR,
   ROLES.STAFF_COORDINATOR,
   ROLES.CHAIRMAN,
   ROLES.VICE_CHAIRMAN,
@@ -24,17 +26,20 @@ export const ROLE_LIST = [
   ROLES.EXECUTIVE_MEMBER
 ];
 
-// First-level approvers: any ONE of these four can approve/reject member reports
+// First-level approvers: any ONE of these can approve/reject member reports
 export const FIRST_LEVEL_APPROVER_ROLES = [
+  ROLES.ADMINISTRATOR,
   ROLES.CHAIRMAN,
   ROLES.VICE_CHAIRMAN,
   ROLES.SECRETARY,
   ROLES.JOINT_SECRETARY
 ];
 
-// Final approver: only Admin (Staff Coordinator)
+// Final approvers: Administrator (Master User) and Staff Coordinator
 export const FINAL_APPROVER_ROLES = [
-  ROLES.STAFF_COORDINATOR
+  ROLES.ADMINISTRATOR,
+  ROLES.STAFF_COORDINATOR,
+  'Admin (Staff Coordinator)'
 ];
 
 export const WORK_STATUSES = {
@@ -47,29 +52,44 @@ export const WORK_STATUSES = {
   COMPLETED: 'Completed'
 };
 
+export function isMasterAdmin(role) {
+  return role === ROLES.ADMINISTRATOR;
+}
+
 export function isFirstLevelApprover(role) {
-  return FIRST_LEVEL_APPROVER_ROLES.includes(role);
+  return FIRST_LEVEL_APPROVER_ROLES.includes(role) || isMasterAdmin(role);
 }
 
 export function isStaffCoordinator(role) {
-  return role === ROLES.STAFF_COORDINATOR;
+  return (
+    role === ROLES.STAFF_COORDINATOR ||
+    role === 'Admin (Staff Coordinator)' ||
+    isMasterAdmin(role)
+  );
 }
 
 export function canAssignWork(role) {
   return (
-    role === ROLES.STAFF_COORDINATOR ||
+    isMasterAdmin(role) ||
+    isStaffCoordinator(role) ||
     FIRST_LEVEL_APPROVER_ROLES.includes(role) ||
     role === ROLES.EVENT_MANAGEMENT_HEAD
   );
 }
 
 export function canManageMembers(role) {
-  return role === ROLES.STAFF_COORDINATOR || role === ROLES.MEMBERSHIP_DIRECTOR || role === ROLES.SECRETARY;
+  return (
+    isMasterAdmin(role) ||
+    isStaffCoordinator(role) ||
+    role === ROLES.MEMBERSHIP_DIRECTOR ||
+    role === ROLES.SECRETARY
+  );
 }
 
 export function canManageEvents(role) {
   return (
-    role === ROLES.STAFF_COORDINATOR ||
+    isMasterAdmin(role) ||
+    isStaffCoordinator(role) ||
     role === ROLES.EVENT_MANAGEMENT_HEAD ||
     role === ROLES.SECRETARY ||
     role === ROLES.CHAIRMAN
@@ -78,14 +98,16 @@ export function canManageEvents(role) {
 
 export function canManageAnnouncements(role) {
   return (
-    role === ROLES.STAFF_COORDINATOR ||
+    isMasterAdmin(role) ||
+    isStaffCoordinator(role) ||
     FIRST_LEVEL_APPROVER_ROLES.includes(role)
   );
 }
 
 export function canRecordAttendance(role) {
   return (
-    role === ROLES.STAFF_COORDINATOR ||
+    isMasterAdmin(role) ||
+    isStaffCoordinator(role) ||
     role === ROLES.SECRETARY ||
     role === ROLES.JOINT_SECRETARY ||
     role === ROLES.EVENT_MANAGEMENT_HEAD
@@ -94,9 +116,14 @@ export function canRecordAttendance(role) {
 
 export function canAccessManagementReports(role) {
   return (
-    role === ROLES.STAFF_COORDINATOR ||
+    isMasterAdmin(role) ||
+    isStaffCoordinator(role) ||
     FIRST_LEVEL_APPROVER_ROLES.includes(role) ||
     role === ROLES.TREASURER ||
     role === ROLES.MEMBERSHIP_DIRECTOR
   );
+}
+
+export function canOverrideAnything(role) {
+  return isMasterAdmin(role);
 }

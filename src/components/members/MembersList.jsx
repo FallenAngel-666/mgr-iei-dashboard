@@ -15,7 +15,7 @@ import {
   Check,
   UserCheck
 } from 'lucide-react';
-import { canManageMembers, isStaffCoordinator, ROLE_LIST } from '../../config/roles';
+import { canManageMembers, isStaffCoordinator, isMasterAdmin, ROLE_LIST, ROLES } from '../../config/roles';
 import { MemberFormModal } from './MemberFormModal';
 import { deleteMember } from '../../services/firebaseService';
 import { formatCredentialNotice } from '../../services/credentialService';
@@ -34,8 +34,9 @@ export function MembersList({ members = [] }) {
   const [viewingCredentialsMember, setViewingCredentialsMember] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
 
-  const canEdit = canManageMembers(currentUser?.role);
-  const isAdmin = isStaffCoordinator(currentUser?.role);
+  const isMaster = isMasterAdmin(currentUser?.role);
+  const canEdit = canManageMembers(currentUser?.role) || isMaster;
+  const isAdmin = isStaffCoordinator(currentUser?.role) || isMaster;
 
   const copyToClipboard = (text, fieldName) => {
     navigator.clipboard.writeText(text);
@@ -158,9 +159,15 @@ export function MembersList({ members = [] }) {
                       <h3 className="text-sm font-bold text-iei-navy-950 leading-tight">
                         {m.name}
                       </h3>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 mt-1">
-                        <ShieldCheck className="w-3 h-3 text-amber-600" />
-                        {m.role}
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                        m.role === ROLES.ADMINISTRATOR
+                          ? 'bg-purple-100 text-purple-900 border border-purple-300 font-extrabold'
+                          : m.role === ROLES.STAFF_COORDINATOR
+                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
+                      } mt-1`}>
+                        <ShieldCheck className={`w-3 h-3 ${m.role === ROLES.ADMINISTRATOR ? 'text-purple-600' : m.role === ROLES.STAFF_COORDINATOR ? 'text-blue-600' : 'text-amber-600'}`} />
+                        {m.role === ROLES.ADMINISTRATOR ? 'Master Administrator' : m.role}
                       </span>
                     </div>
                   </div>

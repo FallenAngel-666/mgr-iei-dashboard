@@ -49,9 +49,10 @@ export function AuthProvider({ children }) {
       const allMembers = await getMembers();
       const matched = allMembers.find((m) => {
         const u = (m.username || '').toLowerCase();
+        const su = (m.secondaryUsername || '').toLowerCase();
         const e = (m.email || '').toLowerCase();
         const se = (m.secondaryEmail || '').toLowerCase();
-        return u === cleanIdentifier || e === cleanIdentifier || se === cleanIdentifier;
+        return u === cleanIdentifier || su === cleanIdentifier || e === cleanIdentifier || se === cleanIdentifier;
       });
 
       if (matched) {

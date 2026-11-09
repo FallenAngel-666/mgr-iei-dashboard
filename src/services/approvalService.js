@@ -143,10 +143,11 @@ export async function processFirstLevelReview(task, approver, decision, remarks)
  */
 export async function processFinalApproval(task, approver, decision, remarks) {
   if (!isStaffCoordinator(approver.role)) {
-    throw new Error('Unauthorized: Only Admin (Staff Coordinator) has final approval authority.');
+    throw new Error('Unauthorized: Only Staff Coordinator or Administrator has final approval authority.');
   }
 
-  if (task.status !== WORK_STATUSES.PENDING_FINAL) {
+  const isMaster = approver.role === ROLES.ADMINISTRATOR;
+  if (!isMaster && task.status !== WORK_STATUSES.PENDING_FINAL) {
     throw new Error(`Invalid state: Report is in status "${task.status}". Final approval requires status "Pending Final Approval".`);
   }
 

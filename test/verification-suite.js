@@ -5,9 +5,11 @@ import {
   FIRST_LEVEL_APPROVER_ROLES, 
   isFirstLevelApprover, 
   isStaffCoordinator, 
+  isMasterAdmin,
   canAssignWork, 
   canManageMembers, 
-  canRecordAttendance 
+  canRecordAttendance,
+  canOverrideAnything
 } from '../src/config/roles.js';
 
 import {
@@ -76,8 +78,10 @@ async function runTestSuite() {
 
   // 1. IEI ROLES & PERMISSIONS
   console.log('--- 1. IEI Roles & Institutional Authority Hierarchy ---');
-  test('10 exact IEI student chapter roles are defined', () => {
-    assert.strictEqual(Object.keys(ROLES).length, 10);
+  test('11 exact IEI student chapter roles are defined including Master Administrator', () => {
+    assert.strictEqual(Object.keys(ROLES).length, 11);
+    assert.strictEqual(ROLES.ADMINISTRATOR, 'Administrator');
+    assert.strictEqual(ROLES.STAFF_COORDINATOR, 'Staff Coordinator');
     assert.strictEqual(ROLES.CHAIRMAN, 'Chairman');
     assert.strictEqual(ROLES.VICE_CHAIRMAN, 'Vice Chairman');
     assert.strictEqual(ROLES.SECRETARY, 'Secretary');
@@ -87,27 +91,34 @@ async function runTestSuite() {
     assert.strictEqual(ROLES.MEMBERSHIP_DIRECTOR, 'Membership Director');
     assert.strictEqual(ROLES.EVENT_MANAGEMENT_HEAD, 'Event Management Head');
     assert.strictEqual(ROLES.EXECUTIVE_MEMBER, 'Executive Member');
-    assert.strictEqual(ROLES.STAFF_COORDINATOR, 'Admin (Staff Coordinator)');
   });
 
-  test('First-level approvers are strictly Chairman, Vice Chairman, Secretary, Joint Secretary', () => {
-    assert.strictEqual(FIRST_LEVEL_APPROVER_ROLES.length, 4);
+  test('Administrator is Master User with full override authority', () => {
+    assert.ok(isMasterAdmin(ROLES.ADMINISTRATOR), 'Administrator is Master Admin');
+    assert.ok(canOverrideAnything(ROLES.ADMINISTRATOR), 'Administrator can override anything');
+    assert.ok(!isMasterAdmin(ROLES.STAFF_COORDINATOR), 'Staff is not Master Admin');
+    assert.ok(!isMasterAdmin(ROLES.CHAIRMAN), 'Chairman is not Master Admin');
+  });
+
+  test('First-level approvers include Chairman, Vice Chairman, Secretary, Joint Secretary, and Administrator', () => {
     assert.ok(isFirstLevelApprover(ROLES.CHAIRMAN));
     assert.ok(isFirstLevelApprover(ROLES.VICE_CHAIRMAN));
     assert.ok(isFirstLevelApprover(ROLES.SECRETARY));
     assert.ok(isFirstLevelApprover(ROLES.JOINT_SECRETARY));
+    assert.ok(isFirstLevelApprover(ROLES.ADMINISTRATOR));
     assert.ok(!isFirstLevelApprover(ROLES.EXECUTIVE_MEMBER));
     assert.ok(!isFirstLevelApprover(ROLES.TREASURER));
   });
 
-  test('Final authority is strictly Admin (Staff Coordinator)', () => {
+  test('Final authority is strictly Administrator and Staff Coordinator', () => {
     assert.ok(isStaffCoordinator(ROLES.STAFF_COORDINATOR));
-    assert.ok(!isStaffCoordinator(ROLES.CHAIRMAN));
-    assert.ok(!isStaffCoordinator(ROLES.SECRETARY));
+    assert.ok(isStaffCoordinator(ROLES.ADMINISTRATOR));
+    assert.ok(!isMasterAdmin(ROLES.CHAIRMAN));
   });
 
-  test('Chairman, Vice Chairman, Secretary, Joint Secretary and Admin can assign work', () => {
-    assert.ok(canAssignWork(ROLES.STAFF_COORDINATOR), 'Admin can assign work');
+  test('Administrator, Staff Coordinator, Chairmen, Vice Chairman, Secretaries, and Event Head can assign work', () => {
+    assert.ok(canAssignWork(ROLES.ADMINISTRATOR), 'Administrator can assign work');
+    assert.ok(canAssignWork(ROLES.STAFF_COORDINATOR), 'Staff Coordinator can assign work');
     assert.ok(canAssignWork(ROLES.CHAIRMAN), 'Chairman can assign work');
     assert.ok(canAssignWork(ROLES.VICE_CHAIRMAN), 'Vice Chairman can assign work');
     assert.ok(canAssignWork(ROLES.SECRETARY), 'Secretary can assign work');
@@ -117,11 +128,29 @@ async function runTestSuite() {
   });
 
   // 2. REAL COMMITTEE MEMBERS & CREDENTIALS
-  console.log('\n--- 2. Real Committee Members & Username/Password Generation ---');
+  console.log('\n--- 2. Real Committee Members & Master Administrator ---');
   let loadedMembers;
-  await asyncTest('Real committee members register contains exactly 22 accounts (21 members + 1 Admin)', async () => {
+  await asyncTest('Real committee members register contains exactly 23 accounts (21 members + 1 Staff + 1 Administrator)', async () => {
     loadedMembers = await getMembers();
-    assert.strictEqual(loadedMembers.length, 22, `Expected 22 accounts, found ${loadedMembers.length}`);
+    assert.strictEqual(loadedMembers.length, 23, `Expected 23 accounts, found ${loadedMembers.length}`);
+  });
+
+  test('Master Administrator has username admin.master-01 and administrator alias', () => {
+    const admin = loadedMembers.find((m) => m.role === ROLES.ADMINISTRATOR);
+    assert.ok(admin, 'Administrator account exists');
+    assert.strictEqual(admin.username, 'admin.master-01');
+    assert.strictEqual(admin.secondaryUsername, 'administrator');
+    assert.strictEqual(admin.name, 'Administrator');
+    assert.ok(admin.isMasterAdmin === true);
+  });
+
+  test('Staff Coordinator (Staff Login) has username staff.login and staff.coord-01 alias', () => {
+    const staff = loadedMembers.find((m) => m.role === ROLES.STAFF_COORDINATOR);
+    assert.ok(staff, 'Staff Coordinator account exists');
+    assert.strictEqual(staff.username, 'staff.login');
+    assert.strictEqual(staff.secondaryUsername, 'staff.coord-01');
+    assert.strictEqual(staff.name, 'Staff Coordinator');
+    assert.ok(!loadedMembers.some((m) => m.name.toLowerCase().includes('senthil')), 'No Senthil Kumar exists');
   });
 
   test('Chairman Sriman has official username sriman.chair-01 and strong password', () => {
@@ -189,12 +218,6 @@ async function runTestSuite() {
     assert.strictEqual(execs.length, 11, 'Should have exactly 11 executive members');
     const firstExec = execs.find((m) => m.username === 'aakanish.exec-01');
     assert.ok(firstExec, 'First exec should be aakanish.exec-01');
-  });
-
-  test('Admin Staff Coordinator has admin.staff-01 username', () => {
-    const admin = loadedMembers.find((m) => m.role === ROLES.STAFF_COORDINATOR);
-    assert.ok(admin, 'Admin account exists');
-    assert.strictEqual(admin.username, 'admin.staff-01');
   });
 
   // 3. AUTOMATIC CREDENTIALS GENERATION FOR NEW MEMBERS
@@ -328,6 +351,28 @@ async function runTestSuite() {
     assert.strictEqual(taskCompleted.submittedReport.finalApproval.approvedByRole, ROLES.STAFF_COORDINATOR);
   });
 
+  await asyncTest('Master Administrator can directly override and finalize any report', async () => {
+    const masterAdmin = loadedMembers.find((m) => m.role === ROLES.ADMINISTRATOR);
+    const exec = loadedMembers.find((m) => m.role === ROLES.EXECUTIVE_MEMBER);
+    const testTask = await createTask({
+      title: 'Emergency Lab Equipment Calibration',
+      description: 'Check lab sensors and calibrate apparatus.',
+      assignedToId: exec.id,
+      assignedToName: exec.name,
+      assignedToRole: exec.role,
+      assignedById: masterAdmin.id,
+      assignedByName: masterAdmin.name,
+      assignedByRole: masterAdmin.role
+    });
+
+    const rep = await submitWorkReport(testTask, { title: 'Calibration Report', summary: 'Calibrated.' }, exec);
+    // Master Admin can directly give final approval even from Level 1
+    const overridden = await processFinalApproval(rep, masterAdmin, 'approve', 'Master Administrator direct override sign-off.');
+    assert.strictEqual(overridden.status, WORK_STATUSES.COMPLETED);
+    assert.strictEqual(overridden.submittedReport.finalApproval.approvedByName, masterAdmin.name);
+    assert.strictEqual(overridden.submittedReport.finalApproval.approvedByRole, ROLES.ADMINISTRATOR);
+  });
+
   // 7. DIRECT ESCALATION FOR FIRST-LEVEL APPROVER REPORTS
   console.log('\n--- 7. First-Level Approver Self-Submissions ---');
   await asyncTest('Secretary work report bypasses Level 1 and goes DIRECTLY to Admin (Staff Coordinator)', async () => {
@@ -392,7 +437,7 @@ async function runTestSuite() {
 
     assert.ok(attRecord.id);
     assert.strictEqual(attRecord.eventId, event.id);
-    assert.strictEqual(attRecord.records.length, 22);
+    assert.strictEqual(attRecord.records.length, 23);
   });
 
   // 9. COMMUNITY WORK UPDATES

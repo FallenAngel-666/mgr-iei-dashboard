@@ -29,8 +29,8 @@ import {
 import { generateUsername, generateStrongPassword } from './credentialService.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
-// v4 prefix ensures updated roles/credentials are loaded cleanly in all sessions
-const STORAGE_PREFIX = 'iei_mgr_v4_';
+// v5 prefix ensures Administrator (Master User) and Staff Login credentials load cleanly
+const STORAGE_PREFIX = 'iei_mgr_v5_';
 
 function getLocalData(key, fallback) {
   try {
@@ -62,13 +62,14 @@ let certificatesStore = getLocalData('certificates', INITIAL_CERTIFICATES);
 let achievementsStore = getLocalData('achievements', INITIAL_ACHIEVEMENTS);
 let notificationsStore = getLocalData('notifications', INITIAL_NOTIFICATIONS);
 
-// Purge legacy v1, v2, and v3 localStorage keys if present to ensure complete purity
+// Purge legacy v1, v2, v3, and v4 localStorage keys if present to ensure complete purity
 if (typeof localStorage !== 'undefined') {
   try {
     ['members', 'tasks', 'updates', 'events', 'attendance', 'announcements', 'certificates', 'achievements', 'notifications'].forEach((k) => {
       localStorage.removeItem('iei_mgr_' + k);
       localStorage.removeItem('iei_mgr_v2_' + k);
       localStorage.removeItem('iei_mgr_v3_' + k);
+      localStorage.removeItem('iei_mgr_v4_' + k);
     });
   } catch (e) {
     // ignore

@@ -1,6 +1,8 @@
 import { ROLES } from '../config/roles.js';
 
 export const ROLE_TAGS = {
+  [ROLES.ADMINISTRATOR]: 'admin',
+  [ROLES.STAFF_COORDINATOR]: 'staff',
   [ROLES.CHAIRMAN]: 'chair',
   [ROLES.VICE_CHAIRMAN]: 'vchair',
   [ROLES.SECRETARY]: 'sec',
@@ -9,8 +11,7 @@ export const ROLE_TAGS = {
   [ROLES.JOINT_TREASURER]: 'jtres',
   [ROLES.MEMBERSHIP_DIRECTOR]: 'memdir',
   [ROLES.EVENT_MANAGEMENT_HEAD]: 'emhead',
-  [ROLES.EXECUTIVE_MEMBER]: 'exec',
-  [ROLES.STAFF_COORDINATOR]: 'staff'
+  [ROLES.EXECUTIVE_MEMBER]: 'exec'
 };
 
 /**
