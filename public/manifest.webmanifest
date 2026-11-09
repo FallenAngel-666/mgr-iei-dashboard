@@ -1,7 +1,7 @@
 {
-  "name": "MJR IAE DASHBOARD",
-  "short_name": "MJR IAE",
-  "description": "Institutional Management Platform for MJR IAE Student Chapter, The Institution of Engineers (India), Dr. M.G.R. Educational and Research Institute",
+  "name": "MGR IEI DASHBOARD",
+  "short_name": "MGR IEI",
+  "description": "Institutional Management Platform for MGR IEI Student Chapter, The Institution of Engineers (India), Dr. M.G.R. Educational and Research Institute",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0B2545",
