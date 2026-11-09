@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MGR IEI Student Chapter</string>
+    <string name="title_activity_main">MGR IEI Student Chapter</string>
+    <string name="package_name">in.edu.drmgrdu.iei.studentchapter</string>
+    <string name="custom_url_scheme">in.edu.drmgrdu.iei.studentchapter</string>
+</resources>

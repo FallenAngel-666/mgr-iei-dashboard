@@ -1,0 +1,458 @@
+import {
+  db,
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot
+} from '../config/firebase.js';
+
+import {
+  INITIAL_MEMBERS,
+  INITIAL_TASKS,
+  INITIAL_UPDATES,
+  INITIAL_EVENTS,
+  INITIAL_ATTENDANCE,
+  INITIAL_ANNOUNCEMENTS,
+  INITIAL_CERTIFICATES,
+  INITIAL_ACHIEVEMENTS,
+  INITIAL_NOTIFICATIONS
+} from '../config/seedData.js';
+
+import { generateUsername, generateStrongPassword } from './credentialService.js';
+
+// Local storage backup keys for offline resilience & immediate responsiveness
+// v4 prefix ensures updated roles/credentials are loaded cleanly in all sessions
+const STORAGE_PREFIX = 'iei_mgr_v4_';
+
+function getLocalData(key, fallback) {
+  try {
+    if (typeof localStorage === 'undefined') return fallback;
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function setLocalData(key, data) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+  } catch (e) {
+    console.warn('LocalStorage save failed:', e);
+  }
+}
+
+// In-memory active stores initialized with persistent local storage or seed defaults
+let membersStore = getLocalData('members', INITIAL_MEMBERS);
+let tasksStore = getLocalData('tasks', INITIAL_TASKS);
+let updatesStore = getLocalData('updates', INITIAL_UPDATES);
+let eventsStore = getLocalData('events', INITIAL_EVENTS);
+let attendanceStore = getLocalData('attendance', INITIAL_ATTENDANCE);
+let announcementsStore = getLocalData('announcements', INITIAL_ANNOUNCEMENTS);
+let certificatesStore = getLocalData('certificates', INITIAL_CERTIFICATES);
+let achievementsStore = getLocalData('achievements', INITIAL_ACHIEVEMENTS);
+let notificationsStore = getLocalData('notifications', INITIAL_NOTIFICATIONS);
+
+// Purge legacy v1, v2, and v3 localStorage keys if present to ensure complete purity
+if (typeof localStorage !== 'undefined') {
+  try {
+    ['members', 'tasks', 'updates', 'events', 'attendance', 'announcements', 'certificates', 'achievements', 'notifications'].forEach((k) => {
+      localStorage.removeItem('iei_mgr_' + k);
+      localStorage.removeItem('iei_mgr_v2_' + k);
+      localStorage.removeItem('iei_mgr_v3_' + k);
+    });
+  } catch (e) {
+    // ignore
+  }
+}
+
+// Listeners collection for real-time reactivity
+const subscribers = {
+  members: new Set(),
+  tasks: new Set(),
+  updates: new Set(),
+  events: new Set(),
+  attendance: new Set(),
+  announcements: new Set(),
+  certificates: new Set(),
+  achievements: new Set(),
+  notifications: new Set()
+};
+
+function notify(channel, data) {
+  setLocalData(channel, data);
+  if (subscribers[channel]) {
+    subscribers[channel].forEach((cb) => cb(data));
+  }
+}
+
+// Subscribe helper
+export function subscribeToData(channel, callback) {
+  if (!subscribers[channel]) return () => {};
+  subscribers[channel].add(callback);
+  
+  // Return current data immediately
+  switch (channel) {
+    case 'members': callback(membersStore); break;
+    case 'tasks': callback(tasksStore); break;
+    case 'updates': callback(updatesStore); break;
+    case 'events': callback(eventsStore); break;
+    case 'attendance': callback(attendanceStore); break;
+    case 'announcements': callback(announcementsStore); break;
+    case 'certificates': callback(certificatesStore); break;
+    case 'achievements': callback(achievementsStore); break;
+    case 'notifications': callback(notificationsStore); break;
+  }
+
+  return () => subscribers[channel].delete(callback);
+}
+
+// Reset store back to clean slate if requested
+export function resetToCleanSlate() {
+  membersStore = [...INITIAL_MEMBERS];
+  tasksStore = [];
+  updatesStore = [];
+  eventsStore = [];
+  attendanceStore = [];
+  announcementsStore = [];
+  certificatesStore = [];
+  achievementsStore = [];
+  notificationsStore = [];
+
+  ['members', 'tasks', 'updates', 'events', 'attendance', 'announcements', 'certificates', 'achievements', 'notifications'].forEach((k) => {
+    setLocalData(k, k === 'members' ? membersStore : []);
+    if (subscribers[k]) {
+      subscribers[k].forEach((cb) => cb(k === 'members' ? membersStore : []));
+    }
+  });
+}
+
+// --- MEMBERS ---
+export async function getMembers() {
+  return [...membersStore];
+}
+
+export async function saveMember(member) {
+  const existingIdx = membersStore.findIndex((m) => m.id === member.id);
+  if (existingIdx >= 0) {
+    const updated = {
+      ...membersStore[existingIdx],
+      ...member,
+      updatedAt: new Date().toISOString()
+    };
+    membersStore[existingIdx] = updated;
+    notify('members', [...membersStore]);
+    return updated;
+  } else {
+    // Generate username and strong password automatically if not supplied
+    const username = member.username || generateUsername(member.name, member.role, membersStore);
+    const password = member.password || generateStrongPassword(member.name);
+    const newMember = {
+      ...member,
+      id: member.id || `user-${Date.now()}`,
+      username,
+      password,
+      joinedDate: member.joinedDate || new Date().toISOString().split('T')[0],
+      status: member.status || 'Active'
+    };
+    membersStore.unshift(newMember);
+    notify('members', [...membersStore]);
+    return newMember;
+  }
+}
+
+export async function deleteMember(id) {
+  membersStore = membersStore.filter((m) => m.id !== id);
+  notify('members', [...membersStore]);
+}
+
+// --- TASKS ---
+export async function getTasks() {
+  return [...tasksStore];
+}
+
+export async function createTask(taskData) {
+  const newTask = {
+    ...taskData,
+    id: `task-${Date.now()}`,
+    assignedDate: taskData.assignedDate || new Date().toISOString().split('T')[0],
+    status: taskData.status || 'Assigned',
+    progress: taskData.progress || 0,
+    updates: [],
+    submittedReport: null,
+    createdAt: new Date().toISOString()
+  };
+  tasksStore.unshift(newTask);
+  notify('tasks', [...tasksStore]);
+
+  // Create notification for assigned member
+  await createNotification({
+    recipientId: newTask.assignedToId,
+    title: 'New Work Assignment',
+    message: `You have been assigned: "${newTask.title}" by ${newTask.assignedByName} (${newTask.assignedByRole}). Due date: ${newTask.dueDate || 'N/A'}.`,
+    type: 'assignment',
+    linkId: newTask.id
+  });
+
+  return newTask;
+}
+
+export async function updateTask(id, updates) {
+  const idx = tasksStore.findIndex((t) => t.id === id);
+  if (idx >= 0) {
+    tasksStore[idx] = { ...tasksStore[idx], ...updates, updatedAt: new Date().toISOString() };
+    notify('tasks', [...tasksStore]);
+    return tasksStore[idx];
+  }
+  return null;
+}
+
+export async function deleteTask(id) {
+  tasksStore = tasksStore.filter((t) => t.id !== id);
+  notify('tasks', [...tasksStore]);
+}
+
+export async function addTaskProgressUpdate(taskId, updateMessage, author) {
+  const idx = tasksStore.findIndex((t) => t.id === taskId);
+  if (idx >= 0) {
+    const task = tasksStore[idx];
+    const newUpdate = {
+      id: `up-${Date.now()}`,
+      authorName: author.name,
+      authorRole: author.role,
+      date: new Date().toISOString(),
+      message: updateMessage
+    };
+    task.updates = [newUpdate, ...(task.updates || [])];
+    task.status = 'In Progress';
+    task.updatedAt = new Date().toISOString();
+    notify('tasks', [...tasksStore]);
+    return task;
+  }
+}
+
+// --- COMMUNITY WORK UPDATES ---
+export async function getUpdates() {
+  return [...updatesStore];
+}
+
+export async function createCommunityUpdate({ author, content, imageUrl, attachmentName }) {
+  const newUpdate = {
+    id: `upd-${Date.now()}`,
+    authorId: author.id,
+    authorName: author.name,
+    authorRole: author.role,
+    timestamp: new Date().toISOString(),
+    content,
+    imageUrl: imageUrl || null,
+    attachmentName: attachmentName || null,
+    reactions: { like: 0, celebrate: 0 }
+  };
+  updatesStore.unshift(newUpdate);
+  notify('updates', [...updatesStore]);
+
+  // Notify chapter members
+  await createNotification({
+    recipientId: 'all',
+    title: 'New Community Work Update',
+    message: `${author.name} (${author.role}) posted a work update: "${content.substring(0, 75)}..."`,
+    type: 'community_update',
+    linkId: newUpdate.id
+  });
+
+  return newUpdate;
+}
+
+export async function toggleUpdateReaction(updateId, reactionType = 'like') {
+  const idx = updatesStore.findIndex((u) => u.id === updateId);
+  if (idx >= 0) {
+    const current = updatesStore[idx].reactions || { like: 0, celebrate: 0 };
+    current[reactionType] = (current[reactionType] || 0) + 1;
+    updatesStore[idx].reactions = current;
+    notify('updates', [...updatesStore]);
+  }
+}
+
+// --- EVENTS ---
+export async function getEvents() {
+  return [...eventsStore];
+}
+
+export async function createEvent(eventData) {
+  const newEvent = {
+    ...eventData,
+    id: `evt-${Date.now()}`,
+    isUpcoming: new Date(eventData.date) >= new Date(new Date().toISOString().split('T')[0]),
+    hasAttendanceRecord: false,
+    createdAt: new Date().toISOString()
+  };
+  eventsStore.unshift(newEvent);
+  notify('events', [...eventsStore]);
+
+  // Notify members of upcoming event
+  await createNotification({
+    recipientId: 'all',
+    title: `Official Event Scheduled: ${newEvent.title}`,
+    message: `${newEvent.category} scheduled on ${newEvent.date} at ${newEvent.venue}.`,
+    type: 'event',
+    linkId: newEvent.id
+  });
+
+  return newEvent;
+}
+
+export async function updateEvent(id, updates) {
+  const idx = eventsStore.findIndex((e) => e.id === id);
+  if (idx >= 0) {
+    eventsStore[idx] = { ...eventsStore[idx], ...updates };
+    notify('events', [...eventsStore]);
+    return eventsStore[idx];
+  }
+  return null;
+}
+
+// --- ATTENDANCE (Strictly for Committee Meetings and Official Events only) ---
+export async function getAttendance() {
+  return [...attendanceStore];
+}
+
+export async function recordEventAttendance({ eventId, eventTitle, category, date, recordedBy, notes, documentUrl, records }) {
+  const newAttendance = {
+    id: `att-${Date.now()}`,
+    eventId,
+    eventTitle,
+    category,
+    date,
+    recordedById: recordedBy.id,
+    recordedByName: recordedBy.name,
+    recordedByRole: recordedBy.role,
+    notes: notes || '',
+    documentUrl: documentUrl || null,
+    records,
+    createdAt: new Date().toISOString()
+  };
+
+  attendanceStore.unshift(newAttendance);
+  notify('attendance', [...attendanceStore]);
+
+  // Mark the corresponding event as having attendance record
+  const evIdx = eventsStore.findIndex((e) => e.id === eventId);
+  if (evIdx >= 0) {
+    eventsStore[evIdx].hasAttendanceRecord = true;
+    eventsStore[evIdx].attendanceId = newAttendance.id;
+    notify('events', [...eventsStore]);
+  }
+
+  return newAttendance;
+}
+
+// --- ANNOUNCEMENTS ---
+export async function getAnnouncements() {
+  return [...announcementsStore];
+}
+
+export async function createAnnouncement({ title, priority, content, attachmentName, author }) {
+  const newAnn = {
+    id: `ann-${Date.now()}`,
+    title,
+    priority: priority || 'Normal',
+    publishedAt: new Date().toISOString(),
+    publishedByName: author.name,
+    publishedByRole: author.role,
+    content,
+    attachmentName: attachmentName || null
+  };
+  announcementsStore.unshift(newAnn);
+  notify('announcements', [...announcementsStore]);
+
+  // Notify all members
+  await createNotification({
+    recipientId: 'all',
+    title: `Announcement: ${title}`,
+    message: `${author.name} published an official announcement: "${content.substring(0, 80)}..."`,
+    type: 'announcement',
+    linkId: newAnn.id
+  });
+
+  return newAnn;
+}
+
+// --- CERTIFICATES & ACHIEVEMENTS ---
+export async function getCertificates() {
+  return [...certificatesStore];
+}
+
+export async function createCertificate(certData) {
+  const newCert = {
+    ...certData,
+    id: `cert-${Date.now()}`,
+    createdAt: new Date().toISOString()
+  };
+  certificatesStore.unshift(newCert);
+  notify('certificates', [...certificatesStore]);
+  return newCert;
+}
+
+export async function getAchievements() {
+  return [...achievementsStore];
+}
+
+export async function createAchievement(achData) {
+  const newAch = {
+    ...achData,
+    id: `ach-${Date.now()}`,
+    createdAt: new Date().toISOString()
+  };
+  achievementsStore.unshift(newAch);
+  notify('achievements', [...achievementsStore]);
+  return newAch;
+}
+
+// --- NOTIFICATIONS ---
+export async function getNotifications(userId, userRole) {
+  return notificationsStore.filter((n) => {
+    if (n.recipientId === 'all') return true;
+    if (n.recipientId === userId) return true;
+    if (n.recipientRole && n.recipientRole === userRole) return true;
+    return false;
+  });
+}
+
+export async function createNotification(notifData) {
+  const newNotif = {
+    ...notifData,
+    id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    date: new Date().toISOString(),
+    read: false
+  };
+  notificationsStore.unshift(newNotif);
+  notify('notifications', [...notificationsStore]);
+  return newNotif;
+}
+
+export async function markNotificationAsRead(notifId) {
+  const idx = notificationsStore.findIndex((n) => n.id === notifId);
+  if (idx >= 0) {
+    notificationsStore[idx].read = true;
+    notify('notifications', [...notificationsStore]);
+  }
+}
+
+export async function markAllNotificationsAsRead(userId, userRole) {
+  notificationsStore = notificationsStore.map((n) => {
+    if (n.recipientId === 'all' || n.recipientId === userId || n.recipientRole === userRole) {
+      return { ...n, read: true };
+    }
+    return n;
+  });
+  notify('notifications', [...notificationsStore]);
+}

@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions for institutional authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    
+    function isStaffCoordinator() {
+      return isAuthenticated() && (
+        getUserRole() == 'Admin (Staff Coordinator)' ||
+        request.auth.token.email.matches('.*admin.*@drmgrdu\\.ac\\.in')
+      );
+    }
+    
+    function isFirstLevelApprover() {
+      return isAuthenticated() && (
+        getUserRole() in ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary'] ||
+        isStaffCoordinator()
+      );
+    }
+
+    // Members / Users Collection
+    match /iei_users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaffCoordinator() || request.auth.uid == userId;
+    }
+    
+    // Tasks and Work Reports
+    match /iei_tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create: if isFirstLevelApprover();
+      // Only staff coordinator can finalize status to Completed
+      allow update: if isAuthenticated() && (
+        isStaffCoordinator() ||
+        (isFirstLevelApprover() && request.resource.data.status != 'Completed') ||
+        (resource.data.assignedToId == request.auth.uid && request.resource.data.status in ['In Progress', 'Pending First-Level Approval', 'Pending Final Approval'])
+      );
+      allow delete: if isStaffCoordinator();
+    }
+    
+    // Community Work Updates
+    match /iei_updates/{updateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated(); // For likes/reactions
+      allow delete: if isStaffCoordinator() || resource.data.authorId == request.auth.uid;
+    }
+    
+    // Events
+    match /iei_events/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isFirstLevelApprover();
+    }
+    
+    // Attendance Records (Strictly for official meetings & events)
+    match /iei_attendance/{attId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isFirstLevelApprover();
+      allow delete: if isStaffCoordinator();
+    }
+    
+    // Announcements
+    match /iei_announcements/{annId} {
+      allow read: if isAuthenticated();
+      allow write: if isFirstLevelApprover();
+    }
+    
+    // Certificates and Achievements
+    match /iei_certificates/{certId} {
+      allow read: if isAuthenticated();
+      allow write: if isFirstLevelApprover();
+    }
+    
+    match /iei_achievements/{achId} {
+      allow read: if isAuthenticated();
+      allow write: if isFirstLevelApprover();
+    }
+    
+    // Individual Notifications
+    match /iei_notifications/{notifId} {
+      allow read: if isAuthenticated() && (
+        resource.data.recipientId == request.auth.uid || 
+        resource.data.recipientId == 'all' ||
+        resource.data.recipientRole == getUserRole()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      allow delete: if isStaffCoordinator();
+    }
+  }
+}

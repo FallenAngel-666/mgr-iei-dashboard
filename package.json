@@ -1,0 +1,65 @@
+{
+  "name": "mgr-iei-platform",
+  "productName": "MGR IEI Student Chapter",
+  "description": "Institutional Management Platform for IEI Student Chapter, Dr. M.G.R. Educational and Research Institute",
+  "author": "MGR IEI Student Chapter",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/verification-suite.js",
+    "check": "node test/verification-suite.js && vite build",
+    "electron:dev": "electron .",
+    "build:win": "vite build && electron-builder --win portable --x64",
+    "build:android": "npx cap sync android && cd android && ./gradlew assembleDebug && cd ..",
+    "deploy": "npm run build && firebase deploy",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage:rules",
+    "deploy:all": "npm run build && firebase deploy --only hosting,firestore,storage"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "firebase": "^10.12.0",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "lucide-react": "^0.383.0",
+    "postcss": "^8.4.38",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.3.0",
+    "tailwindcss": "^3.4.3",
+    "vite": "^5.2.11"
+  },
+  "build": {
+    "appId": "in.edu.drmgrdu.iei.studentchapter",
+    "productName": "MGR IEI Student Chapter",
+    "copyright": "Copyright © 2026 The Institution of Engineers (India) - MGR Chapter",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/**/*"
+    ],
+    "win": {
+      "icon": "public/assets/icon.ico",
+      "target": "portable"
+    }
+  }
+}

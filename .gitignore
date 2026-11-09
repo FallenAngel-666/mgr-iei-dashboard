@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production build outputs
+dist/
+build/
+release/
+
+# Compiled Standalone Installers & Binaries (Keep source, deliver from CI/Release)
+# Comment out if you want to track pre-compiled binaries in git:
+# *.apk
+# *.exe
+
+# Environment variables & local secrets
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# Firebase CLI cache & logs
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# Android local builds & Gradle cache
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+*.hprof
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs & Diagnostics
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

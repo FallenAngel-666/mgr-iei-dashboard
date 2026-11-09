@@ -1,0 +1,13 @@
+{
+  "appId": "in.edu.drmgrdu.iei.studentchapter",
+  "appName": "MGR IEI Student Chapter",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0B2545",
+    "allowMixedContent": true
+  }
+}

@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* Institutional styling enhancements */
+.font-display {
+  font-family: 'Cinzel', serif;
+}
+
+.iei-header-gradient {
+  background: linear-gradient(135deg, #0B2545 0%, #134A8A 50%, #0B2545 100%);
+}
+
+.iei-gold-gradient {
+  background: linear-gradient(135deg, #C59B27 0%, #E3C148 50%, #C59B27 100%);
+}
+
+/* Glassmorphism & Cards */
+.iei-card {
+  @apply bg-white border border-slate-200/80 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+.iei-badge-gold {
+  @apply bg-amber-50 text-amber-800 border border-amber-300 font-medium;
+}
+
+.iei-badge-navy {
+  @apply bg-blue-50 text-iei-navy-800 border border-iei-navy-200 font-medium;
+}
+
+/* Print styles for reports */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
