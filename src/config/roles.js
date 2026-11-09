@@ -77,8 +77,8 @@ export function canAssignWork(role) {
 
 /**
  * Confidential Membership Directory Access:
- * STRICT RULE: Only Sri Priyan (Joint Secretary), Ramya Sri & Swathi Nandhana (Membership Directorate),
- * and the Master Administrator can view and access the Membership Directory.
+ * STRICT RULE: Only Sri Priyan (Joint Secretary), Swathi Nandhana (Membership Director),
+ * Ramya Sri (Event Management Head), and the Master Administrator can view and access the Membership Directory.
  * Blocked for all other committee members and staff.
  */
 export function canAccessMembersDirectory(user) {
@@ -100,14 +100,7 @@ export function canAccessMembersDirectory(user) {
     email === 'sri.priyan.s.2607@gmail.com' || 
     (name.includes('SRIPRIYAN') && role === ROLES.JOINT_SECRETARY);
 
-  // 2. Ramya Sri M (Membership Director)
-  const isRamyaSri = 
-    username === 'ramya.memdir-01' || 
-    username === 'ramya.emhead-01' || 
-    email === 'ramyoshiii017@gmail.com' || 
-    (name.includes('RAMYA') && name.includes('SRI'));
-
-  // 3. Swathi Nandhana M (Membership Director)
+  // 2. Swathi Nandhana M (Membership Director)
   const isSwathiNandhana = 
     username === 'swathi.memdir-01' || 
     username === 'swathi.emhead-01' || 
@@ -115,7 +108,15 @@ export function canAccessMembersDirectory(user) {
     name.includes('SWATHI') ||
     role === ROLES.MEMBERSHIP_DIRECTOR;
 
-  return Boolean(isSriPriyan || isRamyaSri || isSwathiNandhana);
+  // 3. Ramya Sri M (Event Management Head)
+  const isRamyaSri = 
+    username === 'ramya.emhead-01' || 
+    username === 'ramya.memdir-01' || 
+    email === 'ramyoshiii017@gmail.com' || 
+    (name.includes('RAMYA') && name.includes('SRI')) ||
+    (role === ROLES.EVENT_MANAGEMENT_HEAD && name.includes('RAMYA'));
+
+  return Boolean(isSriPriyan || isSwathiNandhana || isRamyaSri);
 }
 
 export function canManageMembers(userOrRole) {

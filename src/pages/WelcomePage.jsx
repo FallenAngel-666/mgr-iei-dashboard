@@ -104,7 +104,7 @@ export function WelcomePage({ onNavigateToLogin }) {
               className="h-10 sm:h-12 w-auto object-contain"
             />
             <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-            {/* Official IEI Emblem & MJR IAE DASHBOARD Title */}
+            {/* Official IEI Emblem & MGR IEI DASHBOARD Title */}
             <div className="flex items-center gap-2.5">
               <img
                 src={profile.aboutIeiLogo || '/assets/apk-logo.png'}
@@ -113,7 +113,7 @@ export function WelcomePage({ onNavigateToLogin }) {
               />
               <div className="text-left">
                 <span className="text-[12px] sm:text-sm font-black text-iei-navy-950 uppercase tracking-wide block leading-tight font-serif">
-                  MJR IAE DASHBOARD
+                  MGR IEI DASHBOARD
                 </span>
                 <span className="text-[10px] sm:text-[11px] font-bold text-amber-600 block">
                   The Institution of Engineers (India)
@@ -129,7 +129,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                 onClick={() => scrollToSection('about-iei')}
                 className="hover:text-iei-navy-900 transition-colors cursor-pointer"
               >
-                About IAE
+                About IEI
               </button>
               <button 
                 onClick={() => scrollToSection('about-chapter')}
@@ -153,7 +153,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                 onClick={() => scrollToSection('membership')}
                 className="hover:text-iei-navy-900 transition-colors cursor-pointer"
               >
-                IAE Membership
+                IEI Membership
               </button>
               <button 
                 onClick={() => scrollToSection('contacts')}
@@ -195,7 +195,7 @@ export function WelcomePage({ onNavigateToLogin }) {
           <div className="relative ml-auto w-4/5 max-w-xs bg-white h-full shadow-2xl flex flex-col p-6 z-10">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
               <span className="text-xs font-black uppercase tracking-wider text-iei-navy-950 font-serif">
-                MJR IAE Navigation
+                MGR IEI Navigation
               </span>
               <button 
                 onClick={() => setIsSideMenuOpen(false)}
@@ -210,7 +210,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                 onClick={() => scrollToSection('about-iei')}
                 className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
               >
-                <span>1. About IAE</span>
+                <span>1. About IEI</span>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
               <button
@@ -238,7 +238,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                 onClick={() => scrollToSection('membership')}
                 className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
               >
-                <span>5. IAE Membership</span>
+                <span>5. IEI Membership</span>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
               <button
@@ -275,7 +275,7 @@ export function WelcomePage({ onNavigateToLogin }) {
         <div className="relative max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-amber-500/15 border border-amber-400/30 text-amber-300 text-[11px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest mb-4">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Chartered Institutional Student Chapter â€¢ 1935</span>
+            <span>Chartered Institutional Student Chapter • 1935</span>
           </div>
           
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight font-serif">
@@ -286,7 +286,7 @@ export function WelcomePage({ onNavigateToLogin }) {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mt-4 font-normal leading-relaxed">
-            Welcome to the official institutional student portal of MJR IAE Student Chapter. 
+            Welcome to the official institutional student portal of MGR IEI Student Chapter. 
             Fostering technical innovation, professional leadership, and multidisciplinary engineering excellence.
           </p>
 
@@ -295,7 +295,7 @@ export function WelcomePage({ onNavigateToLogin }) {
               onClick={() => scrollToSection('membership')}
               className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-transform hover:scale-103 cursor-pointer"
             >
-              Get IAE Student Membership
+              Get IEI Student Membership
             </button>
             <button
               onClick={() => scrollToSection('about-chapter')}
@@ -308,7 +308,7 @@ export function WelcomePage({ onNavigateToLogin }) {
       </section>
 
       {/* ============================================================ */}
-      {/* 1. INSTITUTION LOGO AND ABOUT IAE                            */}
+      {/* 1. INSTITUTION LOGO AND ABOUT IEI                            */}
       {/* ============================================================ */}
       <section id="about-iei" className="py-16 sm:py-20 px-4 sm:px-6 bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto">
@@ -330,7 +330,7 @@ export function WelcomePage({ onNavigateToLogin }) {
               </span>
             </div>
 
-            {/* About IAE Introduction */}
+            {/* About IEI Introduction */}
             <div className="md:col-span-8">
               <div className="flex items-center gap-2 text-amber-600 text-xs font-bold uppercase tracking-wider mb-1">
                 <BookOpen className="w-4 h-4" />
@@ -364,7 +364,7 @@ export function WelcomePage({ onNavigateToLogin }) {
       </section>
 
       {/* ============================================================ */}
-      {/* 2. ABOUT MJR IAE STUDENT CHAPTER (EXACTLY THREE LINES)       */}
+      {/* 2. ABOUT MGR IEI STUDENT CHAPTER (EXACTLY THREE LINES)       */}
       {/* ============================================================ */}
       <section id="about-chapter" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-50 border-b border-slate-200">
         <div className="max-w-5xl mx-auto">
@@ -374,7 +374,7 @@ export function WelcomePage({ onNavigateToLogin }) {
               <span>Campus Chapter Directorate</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-iei-navy-950 tracking-tight font-serif">
-              {profile.aboutChapterHeading || 'About MJR IAE Student Chapter'}
+              {profile.aboutChapterHeading || 'About MGR IEI Student Chapter'}
             </h2>
           </div>
 
@@ -440,7 +440,7 @@ export function WelcomePage({ onNavigateToLogin }) {
 
       {/* ============================================================ */}
       {/* 4. UPCOMING EVENTS (Posters, Names, Dates, Descriptions)     */}
-      {/* Note: Must appear BEFORE IAE Membership as strictly required  */}
+      {/* Note: Must appear BEFORE IEI Membership                      */}
       {/* ============================================================ */}
       <section id="events" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-50 border-b border-slate-200">
         <div className="max-w-5xl mx-auto">
@@ -487,7 +487,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                       <div className="flex items-center gap-2 text-xs font-bold text-amber-600 mb-2">
                         <Calendar className="w-3.5 h-3.5" />
                         <span>{evt.date || 'Date Announced Soon'}</span>
-                        {evt.time && <span>â€¢ {evt.time}</span>}
+                        {evt.time && <span>• {evt.time}</span>}
                       </div>
 
                       <h3 className="text-base font-bold text-iei-navy-950 line-clamp-2">
@@ -540,7 +540,7 @@ export function WelcomePage({ onNavigateToLogin }) {
       </section>
 
       {/* ============================================================ */}
-      {/* 5. IAE MEMBERSHIP (Card / Registration & Google Form)        */}
+      {/* 5. IEI MEMBERSHIP (Card / Registration & Google Form)        */}
       {/* ============================================================ */}
       <section id="membership" className="py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-br from-iei-navy-950 via-slate-900 to-iei-navy-950 text-white">
         <div className="max-w-4xl mx-auto bg-gradient-to-r from-iei-navy-900 to-slate-900 p-8 sm:p-12 rounded-3xl border border-amber-400/30 shadow-2xl text-center relative overflow-hidden">
@@ -552,11 +552,11 @@ export function WelcomePage({ onNavigateToLogin }) {
           </div>
 
           <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight font-serif">
-            IAE Membership
+            IEI Membership
           </h2>
 
           <p className="text-slate-300 text-sm max-w-xl mx-auto mt-3 leading-relaxed">
-            Apply today to receive your official IEI / IAE Student Membership Card and unlock access to national technical symposiums, research journals, professional engineering credentials, and industrial masterclasses.
+            Apply today to receive your official IEI Student Membership Card and unlock access to national technical symposiums, research journals, professional engineering credentials, and industrial masterclasses.
           </p>
 
           <div className="mt-8">
@@ -577,7 +577,7 @@ export function WelcomePage({ onNavigateToLogin }) {
       </section>
 
       {/* ============================================================ */}
-      {/* 6. CONTACT DETAILS (Sriman and Geetha)                       */}
+      {/* 6. CONTACT DETAILS (Sriman Narayana Moorthy & Geethalakshmi) */}
       {/* ============================================================ */}
       <section id="contacts" className="py-16 sm:py-20 px-4 sm:px-6 bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto">
@@ -602,17 +602,19 @@ export function WelcomePage({ onNavigateToLogin }) {
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-amber-700 uppercase tracking-widest bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-                      {c.role || 'Chairman'}
+                    <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider bg-amber-100 px-3 py-1 rounded-lg border border-amber-300">
+                      {c.role || 'Student Chairman Elect'}
                     </span>
                     <Phone className="w-4 h-4 text-slate-400" />
                   </div>
-                  <h3 className="text-lg font-bold text-iei-navy-950">
-                    {c.name} {c.fullName && c.fullName !== c.name ? `(${c.fullName})` : ''}
+                  <h3 className="text-lg font-black text-iei-navy-950">
+                    {c.name}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {c.department || 'Engineering'} â€¢ MJR IAE Student Chapter
-                  </p>
+                  <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                    <span>{c.department || 'Engineering'}</span>
+                    <span className="text-slate-400">•</span>
+                    <span className="font-medium text-slate-600">MGR IEI Student Chapter</span>
+                  </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-slate-200/80 space-y-2">
@@ -655,19 +657,19 @@ export function WelcomePage({ onNavigateToLogin }) {
             />
             <div>
               <p className="text-sm font-black tracking-wide font-serif">
-                MJR IAE DASHBOARD
+                MGR IEI DASHBOARD
               </p>
               <p className="text-xs text-slate-400">
-                The Institution of Engineers (India) â€¢ Dr. M.G.R. Educational and Research Institute
+                The Institution of Engineers (India) • Dr. M.G.R. Educational and Research Institute
               </p>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 text-xs text-slate-400">
-            <span>Charter Code: MGR-SC-1935</span>
-            <span className="hidden sm:inline">â€¢</span>
+            <span>Chapter Code: MGR-SC-1935</span>
+            <span className="hidden sm:inline">•</span>
             <span>Maduravoyal, Chennai-600095</span>
-            <span className="hidden sm:inline">â€¢</span>
+            <span className="hidden sm:inline">•</span>
             <button
               onClick={onNavigateToLogin}
               className="text-amber-400 hover:text-amber-300 font-bold underline underline-offset-4 cursor-pointer"

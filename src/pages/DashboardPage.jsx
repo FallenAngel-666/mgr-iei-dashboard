@@ -191,7 +191,7 @@ export function DashboardPage() {
                   <h3 className="text-base font-bold text-iei-navy-950">Confidential Directory Access Restricted</h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                     The Chapter Membership Directory is confidential and strictly accessible only by 
-                    <strong className="text-iei-navy-900 block mt-1">Sri Priyan (Joint Secretary), Ramya Sri &amp; Swathi Nandhana (Membership Directorate)</strong>
+                    <strong className="text-iei-navy-900 block mt-1">Sri Priyan (Joint Secretary), Swathi Nandhana (Membership Director), Ramya Sri (Event Management Head), and Master Administrator</strong>
                   </p>
                   <button
                     onClick={() => setActiveTab('dashboard')}

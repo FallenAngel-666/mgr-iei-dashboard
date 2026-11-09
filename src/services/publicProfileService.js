@@ -10,10 +10,10 @@ import {
 // Default institutional public profile configuration
 export const DEFAULT_PUBLIC_PROFILE = {
   aboutIeiHeading: 'THE INSTITUTION OF ENGINEERS (INDIA)',
-  aboutIeiContent: 'The Institution of Engineers (India) [IEI / IAE] is the largest multi-disciplinary professional body of engineers, established in 1920 and incorporated by Royal Charter in 1935. Serving the engineering fraternity for over a century with 125+ centres across India and overseas, it spearheads engineering education, professional ethics, global accreditation, and technological innovation.',
+  aboutIeiContent: 'The Institution of Engineers (India) [IEI] is the largest multi-disciplinary professional body of engineers, established in 1920 and incorporated by Royal Charter in 1935. Serving the engineering fraternity for over a century with 125+ centres across India and overseas, it spearheads engineering education, professional ethics, global accreditation, and technological innovation.',
   aboutIeiLogo: '/assets/apk-logo.png',
   
-  aboutChapterHeading: 'About MJR IAE Student Chapter',
+  aboutChapterHeading: 'About MGR IEI Student Chapter',
   // Exactly three lines requirement
   aboutChapterLines: [
     'Empowering future engineers through multidisciplinary technical symposiums, research, and innovation.',
@@ -39,7 +39,7 @@ export const DEFAULT_PUBLIC_PROFILE = {
     {
       id: 'photo-3',
       url: '/assets/website-logo.png',
-      title: 'MJR IAE Student Chapter Directorate',
+      title: 'MGR IEI Student Chapter Directorate',
       caption: 'Multidisciplinary Engineering Symposiums & Technical Workshops'
     },
     {
@@ -59,13 +59,12 @@ export const DEFAULT_PUBLIC_PROFILE = {
   // Google Form URL for Student Membership Card
   membershipFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc-iei-student-membership/viewform',
 
-  // Official contact persons (Sriman and Geetha)
+  // Official contact persons: Sriman Narayana Moorthy & Geethalakshmi (Student Chairman Elect)
   contacts: [
     {
       id: 'contact-sriman',
-      name: 'Sriman',
-      fullName: 'Sriman Narayana Moorthy S',
-      role: 'Chairman',
+      name: 'Sriman Narayana Moorthy',
+      role: 'Student Chairman Elect',
       phone: '8015803274',
       displayPhone: '+91 80158 03274',
       email: 'srimannarayanamoorthysridhar@gmail.com',
@@ -73,9 +72,8 @@ export const DEFAULT_PUBLIC_PROFILE = {
     },
     {
       id: 'contact-geetha',
-      name: 'Geetha',
-      fullName: 'Geethalakshmi A',
-      role: 'Chairman',
+      name: 'Geethalakshmi',
+      role: 'Student Chairman Elect',
       phone: '9884633809',
       displayPhone: '+91 98846 33809',
       email: 'geethaashok3114@gmail.com',
@@ -87,14 +85,48 @@ export const DEFAULT_PUBLIC_PROFILE = {
   upcomingEvents: []
 };
 
-const PROFILE_STORAGE_KEY = 'iei_public_profile_v1';
-const EVENTS_STORAGE_KEY = 'iei_public_events_v1';
+const PROFILE_STORAGE_KEY = 'iei_public_profile_v2';
+const EVENTS_STORAGE_KEY = 'iei_public_events_v2';
 
 function getLocalData(key, fallback) {
   try {
     if (typeof localStorage === 'undefined') return fallback;
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    
+    // Auto-migrate contact person formatting if older v1 data was cached
+    if (parsed && Array.isArray(parsed.contacts)) {
+      parsed.contacts = parsed.contacts.map((c) => {
+        if (c.phone === '8015803274' || (c.name && c.name.toLowerCase().includes('sriman'))) {
+          return {
+            ...c,
+            name: 'Sriman Narayana Moorthy',
+            role: 'Student Chairman Elect',
+            phone: '8015803274',
+            displayPhone: '+91 80158 03274',
+            email: 'srimannarayanamoorthysridhar@gmail.com'
+          };
+        }
+        if (c.phone === '9884633809' || (c.name && c.name.toLowerCase().includes('geetha'))) {
+          return {
+            ...c,
+            name: 'Geethalakshmi',
+            role: 'Student Chairman Elect',
+            phone: '9884633809',
+            displayPhone: '+91 98846 33809',
+            email: 'geethaashok3114@gmail.com'
+          };
+        }
+        return c;
+      });
+    }
+
+    if (parsed && parsed.aboutChapterHeading && parsed.aboutChapterHeading.includes('MJR IAE')) {
+      parsed.aboutChapterHeading = 'About MGR IEI Student Chapter';
+    }
+
+    return parsed;
   } catch (e) {
     return fallback;
   }
@@ -138,6 +170,30 @@ if (typeof window !== 'undefined') {
       if (snap.exists()) {
         const cloudData = snap.data();
         publicProfileStore = { ...DEFAULT_PUBLIC_PROFILE, ...cloudData };
+        // Ensure contacts have Sriman Narayana Moorthy and Geethalakshmi clean names
+        if (Array.isArray(publicProfileStore.contacts)) {
+          publicProfileStore.contacts = publicProfileStore.contacts.map((c) => {
+            if (c.phone === '8015803274' || (c.name && c.name.toLowerCase().includes('sriman'))) {
+              return {
+                ...c,
+                name: 'Sriman Narayana Moorthy',
+                role: 'Student Chairman Elect',
+                phone: '8015803274',
+                displayPhone: '+91 80158 03274'
+              };
+            }
+            if (c.phone === '9884633809' || (c.name && c.name.toLowerCase().includes('geetha'))) {
+              return {
+                ...c,
+                name: 'Geethalakshmi',
+                role: 'Student Chairman Elect',
+                phone: '9884633809',
+                displayPhone: '+91 98846 33809'
+              };
+            }
+            return c;
+          });
+        }
         notifyProfile();
       }
     }, (err) => {

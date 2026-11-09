@@ -109,7 +109,7 @@ export function CurtainAnimation({ onComplete }) {
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-wider uppercase font-serif drop-shadow-[0_6px_24px_rgba(0,0,0,0.9)] leading-tight">
           WELCOME TO <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-300">
-            MJR IAE STUDENT CHAPTER
+            MGR IEI STUDENT CHAPTER
           </span>
         </h1>
 

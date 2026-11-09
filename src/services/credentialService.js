@@ -1,83 +1,81 @@
 import { ROLES } from '../config/roles.js';
 
-export const ROLE_TAGS = {
-  [ROLES.ADMINISTRATOR]: 'admin',
-  [ROLES.STAFF_COORDINATOR]: 'staff',
-  [ROLES.CHAIRMAN]: 'chair',
-  [ROLES.VICE_CHAIRMAN]: 'vchair',
-  [ROLES.SECRETARY]: 'sec',
-  [ROLES.JOINT_SECRETARY]: 'jsec',
-  [ROLES.TREASURER]: 'tres',
-  [ROLES.JOINT_TREASURER]: 'jtres',
-  [ROLES.MEMBERSHIP_DIRECTOR]: 'memdir',
-  [ROLES.EVENT_MANAGEMENT_HEAD]: 'emhead',
-  [ROLES.EXECUTIVE_MEMBER]: 'exec'
-};
-
-/**
- * Generates an institutional username following the convention:
- * <firstname>.<role_tag>-<index_padded_2_digits>
- * e.g., "SRIMAN NARAYANA MOORTHY S" -> "sriman.chair-01"
- */
-export function generateUsername(name = '', role = ROLES.EXECUTIVE_MEMBER, existingMembers = []) {
-  const cleanParts = name
-    .trim()
-    .split(/\s+/)
-    .map((p) => p.toLowerCase().replace(/[^a-z0-9]/g, ''))
-    .filter(Boolean);
-
-  let firstName = 'member';
-  if (cleanParts.length > 0) {
-    // If the first token is a single-letter initial (e.g. "J L Hemanth"), find the first token with length > 1
-    const longer = cleanParts.find((p) => p.length > 1);
-    firstName = longer || cleanParts[0];
-  }
-
-  const tag = ROLE_TAGS[role] || 'member';
-
-  // Count existing members who share this tag in their username or role
-  const count = existingMembers.filter((m) => {
-    if (m.username && m.username.includes(`.${tag}-`)) return true;
-    return m.role === role;
-  }).length;
-
-  const nextIndex = String(count + 1).padStart(2, '0');
-  return `${firstName}.${tag}-${nextIndex}`;
+export function getRoleTitle(role) {
+  return role || 'Committee Member';
 }
 
 /**
- * Generates a strong, random, unambiguous institutional password strictly prefixed with IEI#
+ * Generate official institutional username based on student identity and role
+ * e.g., "sriman.chair-01", "aakanish.exec-01"
+ */
+export function generateInstitutionalUsername(name, role, existingMembers = []) {
+  if (!name || !role) return '';
+
+  const cleanName = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, ' ')
+    .trim()
+    .split(/\s+/)[0]; // First name token
+
+  const rolePrefixMap = {
+    [ROLES.ADMINISTRATOR]: 'admin.master',
+    [ROLES.STAFF_COORDINATOR]: 'staff.coord',
+    [ROLES.CHAIRMAN]: 'chair',
+    [ROLES.VICE_CHAIRMAN]: 'vchair',
+    [ROLES.SECRETARY]: 'sec',
+    [ROLES.JOINT_SECRETARY]: 'jsec',
+    [ROLES.MEMBERSHIP_DIRECTOR]: 'memdir',
+    [ROLES.EVENT_MANAGEMENT_HEAD]: 'emhead',
+    [ROLES.TREASURER]: 'treas',
+    [ROLES.JOINT_TREASURER]: 'jtreas',
+    [ROLES.EXECUTIVE_MEMBER]: 'exec'
+  };
+
+  const tag = rolePrefixMap[role] || 'member';
+
+  if (role === ROLES.ADMINISTRATOR) {
+    return 'admin.master-01';
+  }
+  if (role === ROLES.STAFF_COORDINATOR) {
+    return 'staff.login';
+  }
+
+  // Count existing with this tag to determine index
+  const matching = existingMembers.filter((m) => 
+    (m.username && m.username.includes(`.${tag}-`)) ||
+    (m.role === role)
+  );
+
+  const nextIndex = String(matching.length + 1).padStart(2, '0');
+  return `${cleanName}.${tag}-${nextIndex}`;
+}
+
+export const generateUsername = generateInstitutionalUsername;
+
+/**
+ * Generate a strong, policy-compliant institutional password:
+ * Pattern: IEI#FirstName*XXXX (XXXX = 4 pseudo-random numbers)
  * e.g., "IEI#Kavitha*7492" or "IEI#Ramya*9164"
  */
-export function generateStrongPassword(name = '') {
-  const symbols = ['*', '#', '$', '!', '@'];
-  const sym2 = symbols[Math.floor(Math.random() * symbols.length)];
+export function generateStrongPassword(name) {
+  const token = (name || 'Member')
+    .replace(/[^a-zA-Z]/g, ' ')
+    .trim()
+    .split(/\s+/)[0];
 
-  // Clean name part if provided
-  let cleanName = 'Member';
-  if (name && name.trim()) {
-    const parts = name.trim().split(/\s+/).map((p) => p.replace(/[^a-zA-Z]/g, '')).filter(Boolean);
-    const longer = parts.find((p) => p.length > 2);
-    if (longer) {
-      cleanName = longer.charAt(0).toUpperCase() + longer.slice(1).toLowerCase();
-    }
-  }
-
-  // 4 random digits
-  const randomDigits = Math.floor(1000 + Math.random() * 9000);
-
-  // Strictly prefixed with IEI#
-  return `IEI#${cleanName}${sym2}${randomDigits}`;
+  const capitalized = token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+  const rand4 = Math.floor(1000 + Math.random() * 9000);
+  return `IEI#${capitalized}*${rand4}`;
 }
 
 /**
- * Formats a ready-to-share message for WhatsApp / Email
+ * Format official credential copy notice for distribution
  */
 export function formatCredentialNotice(member) {
   return `--------------------------------------------------
 THE INSTITUTION OF ENGINEERS (INDIA)
 Dr. M.G.R. Educational & Research Institute
-MJR IAE DASHBOARD — Login Credentials
+MGR IEI DASHBOARD — Login Credentials
 --------------------------------------------------
 Member Name : ${member.name}
 Designation : ${member.role}
@@ -85,7 +83,7 @@ Username    : ${member.username}
 Password    : ${member.password}
 Email       : ${member.email}
 Phone       : ${member.phone || 'N/A'}
-Portal Link : https://mjr-iae-dashboard.web.app
+Portal Link : https://mgr-iei-dashboard.web.app
 --------------------------------------------------
 Please save these credentials safely and do not share them.`;
 }

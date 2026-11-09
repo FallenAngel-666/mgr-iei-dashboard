@@ -209,11 +209,11 @@ async function runTestSuite() {
     assert.strictEqual(alan.role, ROLES.VICE_CHAIRMAN);
   });
 
-  test('Membership Director Ramya Sri has ramya.memdir-01 (with backward-compatible alias)', () => {
+  test('Event Management Head Ramya Sri has ramya.emhead-01 (with backward-compatible alias)', () => {
     const ramya = loadedMembers.find((m) => m.name.includes('RAMYA'));
     assert.ok(ramya, 'Ramya Sri should exist');
-    assert.strictEqual(ramya.username, 'ramya.memdir-01');
-    assert.strictEqual(ramya.role, ROLES.MEMBERSHIP_DIRECTOR);
+    assert.strictEqual(ramya.username, 'ramya.emhead-01');
+    assert.strictEqual(ramya.role, ROLES.EVENT_MANAGEMENT_HEAD);
   });
 
   test('Treasurer Lokeshvari and Joint Treasurer Kalaivani have official usernames', () => {
@@ -648,8 +648,8 @@ async function runTestSuite() {
   });
 
   // 12. WELCOME PAGE & IEI PROFILE UPDATE
-  console.log('\n--- 12. Public Welcome Page & IAE Profile Update Governance ---');
-  test('IAE Profile Update is strictly accessible ONLY to Secretary, Joint Secretary, Chairman, Vice Chairman, and Admin', () => {
+  console.log('\n--- 12. Public Welcome Page & IEI Profile Update Governance ---');
+  test('IEI Profile Update is strictly accessible ONLY to Secretary, Joint Secretary, Chairman, Vice Chairman, and Admin', () => {
     // Authorized roles
     assert.strictEqual(canAccessProfileUpdate(ROLES.CHAIRMAN), true, 'Chairman has access');
     assert.strictEqual(canAccessProfileUpdate(ROLES.VICE_CHAIRMAN), true, 'Vice Chairman has access');
@@ -669,17 +669,21 @@ async function runTestSuite() {
   await asyncTest('Public Welcome Page default configuration holds official branding and verified contacts', async () => {
     const profile = await getPublicProfileConfig();
     assert.ok(profile.aboutIeiHeading.includes('THE INSTITUTION OF ENGINEERS (INDIA)') || profile.aboutIeiHeading.includes('IEI'));
-    assert.ok(profile.aboutChapterHeading.includes('About MJR IAE Student Chapter') || profile.aboutChapterHeading.includes('Student Chapter'));
+    assert.ok(profile.aboutChapterHeading.includes('MGR IEI Student Chapter'));
     assert.strictEqual(profile.aboutChapterLines.length, 3, 'Chapter introduction contains EXACTLY THREE LINES');
     assert.strictEqual(profile.carouselPhotos.length, 5, 'Contains exactly five photos in carousel');
     assert.ok(profile.membershipFormUrl && profile.membershipFormUrl.includes('google.com/forms'));
 
-    // Verified contact persons and actual numbers (Sriman and Geetha)
-    const geetha = profile.contacts.find((c) => c.name.includes('Geetha'));
-    const sriman = profile.contacts.find((c) => c.name.includes('Sriman') || c.name.includes('Rieman'));
-    assert.ok(geetha, 'Geetha is configured as contact');
-    assert.strictEqual(geetha.phone, '9884633809', 'Geetha phone must match verified directory (9884633809)');
-    assert.ok(sriman, 'Sriman is configured as contact');
+    // Verified contact persons and actual numbers (Sriman Narayana Moorthy and Geethalakshmi)
+    const geetha = profile.contacts.find((c) => c.name === 'Geethalakshmi' || c.phone === '9884633809');
+    const sriman = profile.contacts.find((c) => c.name === 'Sriman Narayana Moorthy' || c.phone === '8015803274');
+    assert.ok(geetha, 'Geethalakshmi is configured as contact');
+    assert.strictEqual(geetha.name, 'Geethalakshmi', 'Exact name: Geethalakshmi');
+    assert.strictEqual(geetha.role, 'Student Chairman Elect', 'Exact role: Student Chairman Elect');
+    assert.strictEqual(geetha.phone, '9884633809', 'Geethalakshmi phone must match verified directory (9884633809)');
+    assert.ok(sriman, 'Sriman Narayana Moorthy is configured as contact');
+    assert.strictEqual(sriman.name, 'Sriman Narayana Moorthy', 'Exact name: Sriman Narayana Moorthy');
+    assert.strictEqual(sriman.role, 'Student Chairman Elect', 'Exact role: Student Chairman Elect');
     assert.strictEqual(sriman.phone, '8015803274', 'Sriman phone must match verified directory (8015803274)');
   });
 

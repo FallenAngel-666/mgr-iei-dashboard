@@ -165,11 +165,11 @@ export const INITIAL_MEMBERS = [
     joinedDate: '2026-10-29'
   },
   {
-    id: 'user-memdir-ramya',
+    id: 'user-emhead-ramya',
     name: 'RAMYA SRI M',
-    role: ROLES.MEMBERSHIP_DIRECTOR,
-    username: 'ramya.memdir-01',
-    secondaryUsername: 'ramya.emhead-01',
+    role: ROLES.EVENT_MANAGEMENT_HEAD,
+    username: 'ramya.emhead-01',
+    secondaryUsername: 'ramya.memdir-01',
     password: 'IEI#Ramya*9164',
     email: 'ramyoshiii017@gmail.com',
     secondaryEmail: 'ramyoshiii017@gmail.com',

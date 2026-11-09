@@ -91,6 +91,7 @@ export function ProfileUpdateView() {
       const updatedLines = [line1.trim(), line2.trim(), line3.trim()];
       const updatedProfile = {
         ...profile,
+        aboutChapterHeading: 'About MGR IEI Student Chapter',
         aboutChapterLines: updatedLines,
         aboutChapterContent: updatedLines.join('\n')
       };
@@ -125,7 +126,7 @@ export function ProfileUpdateView() {
     reader.readAsDataURL(file);
   };
 
-  // Contact Persons Updates (Sriman and Geetha)
+  // Contact Persons Updates (Sriman Narayana Moorthy & Geethalakshmi)
   const handleContactChange = (index, field, value) => {
     const updated = [...(profile.contacts || [])];
     updated[index] = { ...updated[index], [field]: value };
@@ -221,7 +222,7 @@ export function ProfileUpdateView() {
             <span>Public Website Directorate Controls</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-iei-navy-950 font-serif">
-            IAE PROFILE UPDATE
+            IEI PROFILE UPDATE
           </h1>
           <p className="text-xs text-slate-500 mt-1 max-w-xl">
             Exclusive directorate portal for Chairman, Vice-Chairman, Secretary, and Joint Secretary to update public-facing Welcome Page narratives, 3-line chapter introduction, five gallery photos, upcoming events, and contact numbers.
@@ -268,7 +269,7 @@ export function ProfileUpdateView() {
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          1. About IAE &amp; Chapter (3-Lines)
+          1. About IEI &amp; Chapter (3-Lines)
         </button>
         <button
           onClick={() => setActiveSubTab('carousel')}
@@ -298,7 +299,7 @@ export function ProfileUpdateView() {
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          4. IAE Membership Form Link
+          4. IEI Membership Form Link
         </button>
         <button
           onClick={() => setActiveSubTab('contacts')}
@@ -308,20 +309,20 @@ export function ProfileUpdateView() {
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          5. Contact Details (Sriman &amp; Geetha)
+          5. Contact Details (Sriman &amp; Geethalakshmi)
         </button>
       </div>
 
       {/* ============================================================ */}
-      {/* SUB-TAB 1: ABOUT IAE & 3-LINE CHAPTER INTRODUCTION           */}
+      {/* SUB-TAB 1: ABOUT IEI & 3-LINE CHAPTER INTRODUCTION           */}
       {/* ============================================================ */}
       {activeSubTab === 'general' && (
         <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6">
-          {/* Section A: About IAE */}
+          {/* Section A: About IEI */}
           <div>
             <h3 className="text-sm font-bold text-iei-navy-950 flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-amber-600" />
-              <span>Section 1: About IAE (THE INSTITUTION OF ENGINEERS (INDIA))</span>
+              <span>Section 1: About IEI (THE INSTITUTION OF ENGINEERS (INDIA))</span>
             </h3>
             <div className="grid grid-cols-1 gap-4 mt-3">
               <div>
@@ -337,7 +338,7 @@ export function ProfileUpdateView() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  About IAE / IEI Introduction
+                  About IEI Introduction
                 </label>
                 <textarea
                   rows={4}
@@ -349,12 +350,12 @@ export function ProfileUpdateView() {
             </div>
           </div>
 
-          {/* Section B: About MJR IAE Student Chapter (EXACTLY THREE LINES) */}
+          {/* Section B: About MGR IEI Student Chapter (EXACTLY THREE LINES) */}
           <div className="pt-6 border-t border-slate-100">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-iei-navy-950 flex items-center gap-2">
                 <Award className="w-4 h-4 text-amber-600" />
-                <span>Section 2: About MJR IAE Student Chapter (EXACTLY THREE LINES)</span>
+                <span>Section 2: About MGR IEI Student Chapter (EXACTLY THREE LINES)</span>
               </h3>
               <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
                 Enforced 3-Line Format
@@ -441,7 +442,7 @@ export function ProfileUpdateView() {
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-sm font-bold text-iei-navy-950 font-serif">
-                Five Photographs of MJR IAE Student Chapter
+                Five Photographs of MGR IEI Student Chapter
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Upload, replace, or customize each of the five photographs displayed in the 1-second automatic slideshow.
@@ -621,14 +622,14 @@ export function ProfileUpdateView() {
       )}
 
       {/* ============================================================ */}
-      {/* SUB-TAB 4: IAE MEMBERSHIP GOOGLE FORM URL                    */}
+      {/* SUB-TAB 4: IEI MEMBERSHIP GOOGLE FORM URL                    */}
       {/* ============================================================ */}
       {activeSubTab === 'membership' && (
         <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6">
           <div>
             <h3 className="text-sm font-bold text-iei-navy-950 flex items-center gap-2 font-serif">
               <LinkIcon className="w-4 h-4 text-amber-600" />
-              <span>Section 5: IAE Student Membership Google Form URL</span>
+              <span>Section 5: IEI Student Membership Google Form URL</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1">
               When a visitor on the public homepage clicks <strong>"Apply for IEI Student Membership Card"</strong>, this Google Form URL opens immediately in a new tab.
@@ -668,17 +669,17 @@ export function ProfileUpdateView() {
       )}
 
       {/* ============================================================ */}
-      {/* SUB-TAB 5: CONTACT DETAILS (SRIMAN AND GEETHA)               */}
+      {/* SUB-TAB 5: CONTACT DETAILS (SRIMAN & GEETHALAKSHMI)          */}
       {/* ============================================================ */}
       {activeSubTab === 'contacts' && (
         <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6">
           <div>
             <h3 className="text-sm font-bold text-iei-navy-950 flex items-center gap-2 font-serif">
               <Phone className="w-4 h-4 text-amber-600" />
-              <span>Section 6: Contact Persons (Sriman &amp; Geetha)</span>
+              <span>Section 6: Contact Persons (Sriman Narayana Moorthy &amp; Geethalakshmi)</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Maintain the contact details and telephone links for student chairpersons Sriman and Geetha. Phone numbers are directly clickable by students.
+              Maintain the contact details and clickable telephone links for Student Chairpersons Sriman Narayana Moorthy and Geethalakshmi.
             </p>
           </div>
 
@@ -693,30 +694,30 @@ export function ProfileUpdateView() {
                     {contact.name || `Contact ${idx + 1}`}
                   </span>
                   <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
-                    Official Chairman
+                    Student Chairman Elect
                   </span>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Display Name
+                    Display Name (Official Name) *
                   </label>
                   <input
                     type="text"
                     value={contact.name}
                     onChange={(e) => handleContactChange(idx, 'name', e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
+                    className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white font-bold"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Full Name (optional)
+                    Designation / Role
                   </label>
                   <input
                     type="text"
-                    value={contact.fullName || ''}
-                    onChange={(e) => handleContactChange(idx, 'fullName', e.target.value)}
+                    value={contact.role || 'Student Chairman Elect'}
+                    onChange={(e) => handleContactChange(idx, 'role', e.target.value)}
                     className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
                   />
                 </div>
@@ -739,7 +740,7 @@ export function ProfileUpdateView() {
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Email Address
+                    Email Address *
                   </label>
                   <input
                     type="email"
