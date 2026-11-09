@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { WelcomePage } from './pages/WelcomePage';
@@ -7,33 +7,70 @@ import { DashboardPage } from './pages/DashboardPage';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
-  const [publicView, setPublicView] = useState('welcome'); // 'welcome' | 'login'
+  
+  // URL hash based view resolution: defaults to 'welcome'
+  const [publicView, setPublicView] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#login') {
+      return 'login';
+    }
+    return 'welcome';
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#login') {
+        setPublicView('login');
+      } else {
+        setPublicView('welcome');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateToLogin = () => {
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#login';
+    }
+    setPublicView('login');
+  };
+
+  const navigateToWelcome = () => {
+    if (typeof window !== 'undefined') {
+      window.location.hash = '';
+      if (window.history && window.history.pushState) {
+        window.history.pushState('', document.title, window.location.pathname + window.location.search);
+      }
+    }
+    setPublicView('welcome');
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-iei-navy-950 flex flex-col items-center justify-center text-white">
+      <div className="min-h-screen bg-iei-navy-950 flex flex-col items-center justify-center text-white selection:bg-amber-500 selection:text-slate-950">
         <div className="relative">
           <img 
-            src="./assets/apk-logo.png" 
+            src="/assets/apk-logo.png" 
             alt="IEI Emblem" 
             className="w-16 h-16 animate-pulse"
           />
         </div>
-        <p className="mt-4 text-xs font-semibold text-iei-gold-400 uppercase tracking-widest">
-          Authenticating IEI Institutional Session...
+        <p className="mt-4 text-xs font-semibold text-amber-400 uppercase tracking-widest">
+          Authenticating MJR IAE Institutional Session...
         </p>
       </div>
     );
   }
 
-  // Strict protected route enforcement:
-  // Unauthenticated visitors access the Public Welcome Page by default,
-  // or the separate Committee Member Login page when chosen.
+  // Strict route protection:
+  // Unauthenticated visitors access the Public Welcome Page by default.
+  // The dedicated Member Portal Sign In page opens ONLY when clicking "COMMITTEE LOGIN" (#login).
   if (!isAuthenticated) {
     if (publicView === 'login') {
-      return <LoginPage onBackToWelcome={() => setPublicView('welcome')} />;
+      return <LoginPage onBackToWelcome={navigateToWelcome} />;
     }
-    return <WelcomePage onNavigateToLogin={() => setPublicView('login')} />;
+    return <WelcomePage onNavigateToLogin={navigateToLogin} />;
   }
 
   // Protected Committee Member Dashboard

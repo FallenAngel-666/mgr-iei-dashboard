@@ -62,16 +62,16 @@ export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
           {/* Official Website Logo - authentic proportions maintained */}
           <div className="flex items-center gap-3">
             <img 
-              src="./assets/website-logo.png" 
+              src="/assets/website-logo.png" 
               alt="Dr. M.G.R. Educational and Research Institute University"
               className="h-10 sm:h-12 w-auto object-contain max-w-[200px] sm:max-w-[280px]"
             />
             <div className="hidden lg:block border-l border-slate-300 pl-3">
-              <h1 className="text-sm font-bold text-iei-navy-900 leading-tight">
-                The Institution of Engineers (India)
+              <h1 className="text-sm font-bold text-iei-navy-900 leading-tight font-serif">
+                MJR IAE DASHBOARD
               </h1>
-              <p className="text-[11px] font-semibold text-iei-gold-700 tracking-wide uppercase">
-                MGR Student Chapter Portal
+              <p className="text-[11px] font-bold text-amber-600 tracking-wide uppercase">
+                The Institution of Engineers (India)
               </p>
             </div>
           </div>

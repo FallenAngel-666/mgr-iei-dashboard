@@ -57,7 +57,7 @@ export function LoginPage({ onBackToWelcome }) {
           </span>
         </div>
         <div className="text-slate-400 text-[11px] font-medium">
-          IEI Institutional Chapter Portal
+          MJR IAE DASHBOARD â€¢ Committee Login
         </div>
       </div>
 
@@ -66,10 +66,10 @@ export function LoginPage({ onBackToWelcome }) {
         {onBackToWelcome && (
           <button
             onClick={onBackToWelcome}
-            className="mb-4 inline-flex items-center gap-2 text-xs font-bold text-iei-gold-400 hover:text-iei-gold-300 transition-colors cursor-pointer"
+            className="mb-4 inline-flex items-center gap-2 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Public Welcome Portal</span>
+            <span>Back to Public Homepage</span>
           </button>
         )}
         <div className="bg-white text-slate-900 rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
@@ -78,7 +78,7 @@ export function LoginPage({ onBackToWelcome }) {
             {/* Website Logo - Original Proportions Maintained */}
             <div className="flex justify-center mb-3">
               <img 
-                src="./assets/website-logo.png" 
+                src="/assets/website-logo.png" 
                 alt="Dr. M.G.R. Educational and Research Institute University Logo"
                 className="h-14 sm:h-16 w-auto object-contain max-w-[280px]"
               />
@@ -87,16 +87,16 @@ export function LoginPage({ onBackToWelcome }) {
             {/* IEI Royal Charter Crest */}
             <div className="flex items-center justify-center gap-3 mt-2">
               <img 
-                src="./assets/apk-logo.png" 
+                src="/assets/apk-logo.png" 
                 alt="Institution of Engineers (India) Crest"
                 className="w-10 h-10 object-contain rounded-full shadow-xs bg-white p-0.5 border border-slate-200"
               />
               <div className="text-left">
-                <h2 className="text-xs font-bold text-iei-navy-950 uppercase tracking-wide">
-                  The Institution of Engineers (India)
+                <h2 className="text-xs font-bold text-iei-navy-950 uppercase tracking-wide font-serif">
+                  THE INSTITUTION OF ENGINEERS (INDIA)
                 </h2>
-                <p className="text-[10px] font-semibold text-iei-gold-700">
-                  MGR Student Chapter Management Platform
+                <p className="text-[10px] font-bold text-amber-600">
+                  MJR IAE DASHBOARD
                 </p>
               </div>
             </div>

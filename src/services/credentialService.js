@@ -77,7 +77,7 @@ export function formatCredentialNotice(member) {
   return `--------------------------------------------------
 THE INSTITUTION OF ENGINEERS (INDIA)
 Dr. M.G.R. Educational & Research Institute
-IEI Student Chapter Portal Login Credentials
+MJR IAE DASHBOARD — Login Credentials
 --------------------------------------------------
 Member Name : ${member.name}
 Designation : ${member.role}
@@ -85,7 +85,7 @@ Username    : ${member.username}
 Password    : ${member.password}
 Email       : ${member.email}
 Phone       : ${member.phone || 'N/A'}
-Portal Link : https://sachin-crackers-smartpos-81c6a.web.app
+Portal Link : https://mjr-iae-dashboard.web.app
 --------------------------------------------------
 Please save these credentials safely and do not share them.`;
 }

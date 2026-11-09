@@ -103,7 +103,7 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
     },
     {
       id: 'profileUpdate',
-      label: 'IEI Profile Update',
+      label: 'IAE Profile Update',
       icon: Globe,
       badge: null
     }
@@ -143,8 +143,8 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
               className="w-12 h-12 object-contain rounded-full bg-white p-1 shadow-md shrink-0"
             />
             <div className="overflow-hidden">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-iei-gold-400 block">
-                IEI Student Chapter
+              <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400 block font-serif">
+                MJR IAE DASHBOARD
               </span>
               <h2 className="text-sm font-bold text-white truncate">
                 Dr. M.G.R. Chapter

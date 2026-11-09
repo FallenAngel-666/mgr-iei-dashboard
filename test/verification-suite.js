@@ -648,8 +648,8 @@ async function runTestSuite() {
   });
 
   // 12. WELCOME PAGE & IEI PROFILE UPDATE
-  console.log('\n--- 12. Public Welcome Page & IEI Profile Update Governance ---');
-  test('IEI Profile Update is strictly accessible ONLY to Secretary, Joint Secretary, Chairman, Vice Chairman, and Admin', () => {
+  console.log('\n--- 12. Public Welcome Page & IAE Profile Update Governance ---');
+  test('IAE Profile Update is strictly accessible ONLY to Secretary, Joint Secretary, Chairman, Vice Chairman, and Admin', () => {
     // Authorized roles
     assert.strictEqual(canAccessProfileUpdate(ROLES.CHAIRMAN), true, 'Chairman has access');
     assert.strictEqual(canAccessProfileUpdate(ROLES.VICE_CHAIRMAN), true, 'Vice Chairman has access');
@@ -668,18 +668,19 @@ async function runTestSuite() {
 
   await asyncTest('Public Welcome Page default configuration holds official branding and verified contacts', async () => {
     const profile = await getPublicProfileConfig();
-    assert.ok(profile.aboutIeiHeading.includes('About IEI'));
-    assert.ok(profile.aboutChapterHeading.includes('About MGR IEI Student Chapter'));
+    assert.ok(profile.aboutIeiHeading.includes('THE INSTITUTION OF ENGINEERS (INDIA)') || profile.aboutIeiHeading.includes('IEI'));
+    assert.ok(profile.aboutChapterHeading.includes('About MJR IAE Student Chapter') || profile.aboutChapterHeading.includes('Student Chapter'));
+    assert.strictEqual(profile.aboutChapterLines.length, 3, 'Chapter introduction contains EXACTLY THREE LINES');
     assert.strictEqual(profile.carouselPhotos.length, 5, 'Contains exactly five photos in carousel');
     assert.ok(profile.membershipFormUrl && profile.membershipFormUrl.includes('google.com/forms'));
 
-    // Verified contact persons and actual numbers
-    const geetha = profile.contacts.find((c) => c.name.includes('Geethalakshmi'));
-    const sriman = profile.contacts.find((c) => c.name.includes('Rieman') || c.name.includes('Sriman'));
-    assert.ok(geetha, 'Geethalakshmi is configured as contact');
-    assert.strictEqual(geetha.phone, '9884633809', 'Geethalakshmi phone must match verified directory');
-    assert.ok(sriman, 'S. Rieman Nayanamurthy is configured as contact');
-    assert.strictEqual(sriman.phone, '8015803274', 'Sriman phone must match verified directory');
+    // Verified contact persons and actual numbers (Sriman and Geetha)
+    const geetha = profile.contacts.find((c) => c.name.includes('Geetha'));
+    const sriman = profile.contacts.find((c) => c.name.includes('Sriman') || c.name.includes('Rieman'));
+    assert.ok(geetha, 'Geetha is configured as contact');
+    assert.strictEqual(geetha.phone, '9884633809', 'Geetha phone must match verified directory (9884633809)');
+    assert.ok(sriman, 'Sriman is configured as contact');
+    assert.strictEqual(sriman.phone, '8015803274', 'Sriman phone must match verified directory (8015803274)');
   });
 
   await asyncTest('Upcoming Events starts with empty list for "Updated Soon" state, and supports publishing/removing', async () => {

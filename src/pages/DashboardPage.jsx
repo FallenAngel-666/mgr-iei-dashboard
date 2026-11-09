@@ -239,7 +239,7 @@ export function DashboardPage() {
               <AnnouncementsList announcements={announcements} />
             )}
 
-            {/* IEI PROFILE UPDATE TAB - Strictly restricted to Chairman, Vice Chairman, Secretary, Joint Secretary, Admin */}
+            {/* IAE PROFILE UPDATE TAB - Strictly restricted to Chairman, Vice Chairman, Secretary, Joint Secretary, Admin */}
             {activeTab === 'profileUpdate' && (
               canAccessProfileUpdate(currentUser?.role) ? (
                 <ProfileUpdateView />
@@ -248,9 +248,9 @@ export function DashboardPage() {
                   <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
                     🔒
                   </div>
-                  <h3 className="text-base font-bold text-iei-navy-950">Directorate Access Restricted</h3>
+                  <h3 className="text-base font-bold text-iei-navy-950 font-serif">Directorate Access Restricted</h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                    The IEI Profile Update section is exclusively accessible to 
+                    The IAE Profile Update section is exclusively accessible to 
                     <strong className="text-iei-navy-900 block mt-1">Chairman, Vice Chairman, Secretary &amp; Joint Secretary</strong>
                   </p>
                   <button

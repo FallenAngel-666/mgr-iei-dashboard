@@ -8,11 +8,11 @@ export function PhotoCarousel({ photos = [] }) {
 
   // Fallback default photos if empty
   const activePhotos = Array.isArray(photos) && photos.length > 0 ? photos : [
-    { id: 'p1', url: './assets/website-logo.png', title: 'Dr. M.G.R. University', caption: 'NAAC A+ Accredited Campus' },
-    { id: 'p2', url: './assets/apk-logo.png', title: 'IEI Crest', caption: 'Royal Charter 1935' },
-    { id: 'p3', url: './assets/website-logo.png', title: 'Technical Directorate', caption: 'Student Chapter Initiatives' },
-    { id: 'p4', url: './assets/apk-logo.png', title: 'Centenary Heritage', caption: 'Advancing Engineering Excellence' },
-    { id: 'p5', url: './assets/website-logo.png', title: 'Research & Innovation', caption: 'Maduravoyal, Chennai-95' }
+    { id: 'p1', url: '/assets/website-logo.png', title: 'Dr. M.G.R. University', caption: 'NAAC A+ Accredited Campus' },
+    { id: 'p2', url: '/assets/apk-logo.png', title: 'IEI Crest', caption: 'Royal Charter 1935' },
+    { id: 'p3', url: '/assets/website-logo.png', title: 'Technical Directorate', caption: 'Student Chapter Initiatives' },
+    { id: 'p4', url: '/assets/apk-logo.png', title: 'Centenary Heritage', caption: 'Advancing Engineering Excellence' },
+    { id: 'p5', url: '/assets/website-logo.png', title: 'Research & Innovation', caption: 'Maduravoyal, Chennai-95' }
   ];
 
   // Automatic rotation: changes every ONE SECOND (1000ms) continuously in a loop

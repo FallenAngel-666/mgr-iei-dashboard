@@ -9,68 +9,76 @@ import {
 
 // Default institutional public profile configuration
 export const DEFAULT_PUBLIC_PROFILE = {
-  aboutIeiHeading: 'About IEI',
-  aboutIeiContent: 'The Institution of Engineers (India) [IEI] is the largest multi-disciplinary professional body of engineers, established in 1920 and incorporated by Royal Charter in 1935. IEI has been serving the engineering fraternity for over a century with 125+ State and Local Centres across India and overseas, spearheading technological advancement, engineering ethics, and international accreditation.',
-  aboutIeiLogo: './assets/apk-logo.png',
+  aboutIeiHeading: 'THE INSTITUTION OF ENGINEERS (INDIA)',
+  aboutIeiContent: 'The Institution of Engineers (India) [IEI / IAE] is the largest multi-disciplinary professional body of engineers, established in 1920 and incorporated by Royal Charter in 1935. Serving the engineering fraternity for over a century with 125+ centres across India and overseas, it spearheads engineering education, professional ethics, global accreditation, and technological innovation.',
+  aboutIeiLogo: '/assets/apk-logo.png',
   
-  aboutChapterHeading: 'About MGR IEI Student Chapter',
-  aboutChapterContent: 'Dr. M.G.R. Educational and Research Institute (Deemed to be University) Student Chapter operates under the institutional charter of The Institution of Engineers (India). Our chapter provides a collaborative technical ecosystem for engineering students across multidisciplinary departments, organizing national symposiums, hackathons, skill-building workshops, and technical paper presentations.',
+  aboutChapterHeading: 'About MJR IAE Student Chapter',
+  // Exactly three lines requirement
+  aboutChapterLines: [
+    'Empowering future engineers through multidisciplinary technical symposiums, research, and innovation.',
+    'Fostering academic excellence, professional ethics, and hands-on technological leadership across departments.',
+    'Operating under the national charter of The Institution of Engineers (India) at Dr. M.G.R. Educational and Research Institute.'
+  ],
+  aboutChapterContent: 'Empowering future engineers through multidisciplinary technical symposiums, research, and innovation.\nFostering academic excellence, professional ethics, and hands-on technological leadership across departments.\nOperating under the national charter of The Institution of Engineers (India) at Dr. M.G.R. Educational and Research Institute.',
   
-  // 5-photo automatic carousel configuration
+  // 5-photo automatic carousel configuration (5 photos)
   carouselPhotos: [
     {
       id: 'photo-1',
-      url: './assets/website-logo.png',
+      url: '/assets/website-logo.png',
       title: 'Dr. M.G.R. Educational and Research Institute',
-      caption: 'Deemed to be University — University with Graded Autonomy Status'
+      caption: 'Deemed to be University — NAAC A+ Accredited Campus'
     },
     {
       id: 'photo-2',
-      url: './assets/apk-logo.png',
+      url: '/assets/apk-logo.png',
       title: 'The Institution of Engineers (India)',
       caption: 'Established 1920 • Incorporated by Royal Charter 1935'
     },
     {
       id: 'photo-3',
-      url: './assets/website-logo.png',
-      title: 'MGR IEI Student Chapter Directorate',
-      caption: 'Empowering future engineering leaders through hands-on technical excellence'
+      url: '/assets/website-logo.png',
+      title: 'MJR IAE Student Chapter Directorate',
+      caption: 'Multidisciplinary Engineering Symposiums & Technical Workshops'
     },
     {
       id: 'photo-4',
-      url: './assets/apk-logo.png',
+      url: '/assets/apk-logo.png',
       title: 'IEI Royal Charter Emblem',
       caption: 'Centenary Heritage in Advancing Engineering Sciences'
     },
     {
       id: 'photo-5',
-      url: './assets/website-logo.png',
-      title: 'NAAC A+ Accredited Campus',
-      caption: 'Periyar E.V.R. High Road, Maduravoyal, Chennai-95, Tamilnadu'
+      url: '/assets/website-logo.png',
+      title: 'Technical Innovations & Projects',
+      caption: 'Maduravoyal, Chennai-95, Tamilnadu'
     }
   ],
 
   // Google Form URL for Student Membership Card
   membershipFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc-iei-student-membership/viewform',
 
-  // Official contact persons (verified phone numbers from project directory)
+  // Official contact persons (Sriman and Geetha)
   contacts: [
     {
-      id: 'contact-1',
-      name: 'Geethalakshmi',
-      role: 'Chairman',
-      phone: '9884633809',
-      displayPhone: '+91 98846 33809',
-      email: 'geethaashok3114@gmail.com',
-      department: 'Engineering'
-    },
-    {
-      id: 'contact-2',
-      name: 'S. Rieman Nayanamurthy',
+      id: 'contact-sriman',
+      name: 'Sriman',
+      fullName: 'Sriman Narayana Moorthy S',
       role: 'Chairman',
       phone: '8015803274',
       displayPhone: '+91 80158 03274',
       email: 'srimannarayanamoorthysridhar@gmail.com',
+      department: 'Engineering'
+    },
+    {
+      id: 'contact-geetha',
+      name: 'Geetha',
+      fullName: 'Geethalakshmi A',
+      role: 'Chairman',
+      phone: '9884633809',
+      displayPhone: '+91 98846 33809',
+      email: 'geethaashok3114@gmail.com',
       department: 'Engineering'
     }
   ],
@@ -128,27 +136,26 @@ if (typeof window !== 'undefined') {
     const profileDocRef = doc(db, 'iei_public_profile', 'main_config');
     onSnapshot(profileDocRef, (snap) => {
       if (snap.exists()) {
-        publicProfileStore = { ...DEFAULT_PUBLIC_PROFILE, ...snap.data() };
+        const cloudData = snap.data();
+        publicProfileStore = { ...DEFAULT_PUBLIC_PROFILE, ...cloudData };
         notifyProfile();
       }
     }, (err) => {
-      console.warn('Firestore profile sync info:', err.message);
+      console.warn('Firestore profile sync info (using cached profile):', err.message);
     });
 
     // 2. Sync public upcoming events collection
     const eventsColRef = collection(db, 'iei_public_events');
     onSnapshot(eventsColRef, (snap) => {
-      if (!snap.empty) {
-        const events = [];
-        snap.forEach((d) => events.push({ id: d.id, ...d.data() }));
-        publicEventsStore = events;
+      if (snap && snap.docs) {
+        publicEventsStore = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         notifyEvents();
       }
     }, (err) => {
-      console.warn('Firestore events sync info:', err.message);
+      console.warn('Firestore events sync info (using cached events):', err.message);
     });
   } catch (err) {
-    console.warn('Firestore snapshot setup skipped:', err);
+    console.warn('Firestore public listener init (running offline):', err);
   }
 }
 
