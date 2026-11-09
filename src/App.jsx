@@ -57,7 +57,7 @@ function AppContent() {
           />
         </div>
         <p className="mt-4 text-xs font-semibold text-amber-400 uppercase tracking-widest">
-          Authenticating MJR IAE Institutional Session...
+          Authenticating IEI Dashboard System Session...
         </p>
       </div>
     );

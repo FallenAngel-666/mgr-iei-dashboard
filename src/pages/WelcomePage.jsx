@@ -104,7 +104,7 @@ export function WelcomePage({ onNavigateToLogin }) {
               className="h-10 sm:h-12 w-auto object-contain"
             />
             <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-            {/* Official IEI Emblem & MGR IEI DASHBOARD Title */}
+            {/* Official IEI Emblem & IEI DASHBOARD SYSTEM Title */}
             <div className="flex items-center gap-2.5">
               <img
                 src={profile.aboutIeiLogo || '/assets/apk-logo.png'}
@@ -113,7 +113,7 @@ export function WelcomePage({ onNavigateToLogin }) {
               />
               <div className="text-left">
                 <span className="text-[12px] sm:text-sm font-black text-iei-navy-950 uppercase tracking-wide block leading-tight font-serif">
-                  MGR IEI DASHBOARD
+                  IEI DASHBOARD SYSTEM
                 </span>
                 <span className="text-[10px] sm:text-[11px] font-bold text-amber-600 block">
                   The Institution of Engineers (India)
@@ -291,12 +291,15 @@ export function WelcomePage({ onNavigateToLogin }) {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-            <button
-              onClick={() => scrollToSection('membership')}
-              className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-transform hover:scale-103 cursor-pointer"
+            <a
+              href={profile.membershipFormUrl || 'https://docs.google.com/forms/d/e/1FAIpQLScd31MirxM6OjdMjEz_cL1AcwNJDdQ-y8nmyllHBmNkNarUlw/viewform?usp=publish-editor'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-transform hover:scale-103 cursor-pointer"
             >
-              Get IEI Student Membership
-            </button>
+              <span>Get IEI Student Membership</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
             <button
               onClick={() => scrollToSection('about-chapter')}
               className="px-6 py-3 bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-white/20 transition-colors cursor-pointer"
@@ -657,7 +660,7 @@ export function WelcomePage({ onNavigateToLogin }) {
             />
             <div>
               <p className="text-sm font-black tracking-wide font-serif">
-                MGR IEI DASHBOARD
+                IEI DASHBOARD SYSTEM
               </p>
               <p className="text-xs text-slate-400">
                 The Institution of Engineers (India) • Dr. M.G.R. Educational and Research Institute

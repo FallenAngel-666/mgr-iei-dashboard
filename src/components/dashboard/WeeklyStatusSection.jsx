@@ -202,7 +202,7 @@ export function WeeklyStatusSection({ tasks = [], updates = [], onSelectTask }) 
 
         {filteredTasks.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-xs">
-            No work assignments recorded for {selectedWeek}.
+            No work assignments recorded for {activeOption?.label || selectedWeekTag || 'the selected cycle'}.
           </div>
         ) : (
           <div className="divide-y divide-slate-100 overflow-x-auto">

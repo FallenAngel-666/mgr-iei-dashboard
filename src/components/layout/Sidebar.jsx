@@ -154,7 +154,7 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
             />
             <div className="overflow-hidden">
               <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400 block font-serif">
-                MGR IEI DASHBOARD
+                IEI DASHBOARD SYSTEM
               </span>
               <h2 className="text-sm font-bold text-white truncate">
                 Dr. M.G.R. Chapter

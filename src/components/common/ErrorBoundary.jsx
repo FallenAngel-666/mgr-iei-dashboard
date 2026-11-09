@@ -16,7 +16,7 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('MJR IAE DASHBOARD Error Caught by Boundary:', error, errorInfo);
+    console.error('IEI DASHBOARD SYSTEM Error Caught by Boundary:', error, errorInfo);
     this.setState({ errorInfo });
   }
 
@@ -37,8 +37,11 @@ export class ErrorBoundary extends React.Component {
   handleClearCache = () => {
     try {
       if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('iei_public_profile_v1');
-        localStorage.removeItem('iei_public_events_v1');
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('iei_')) {
+            localStorage.removeItem(key);
+          }
+        });
       }
       window.location.href = '/';
     } catch {
@@ -59,7 +62,7 @@ export class ErrorBoundary extends React.Component {
             </div>
 
             <span className="text-[11px] font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
-              MJR IAE DASHBOARD â€¢ System Notice
+              IEI DASHBOARD SYSTEM • System Notice
             </span>
 
             <h1 className="text-2xl font-black text-white mt-4 tracking-tight">

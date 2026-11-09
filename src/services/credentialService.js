@@ -75,7 +75,7 @@ export function formatCredentialNotice(member) {
   return `--------------------------------------------------
 THE INSTITUTION OF ENGINEERS (INDIA)
 Dr. M.G.R. Educational & Research Institute
-MGR IEI DASHBOARD — Login Credentials
+IEI DASHBOARD SYSTEM — Login Credentials
 --------------------------------------------------
 Member Name : ${member.name}
 Designation : ${member.role}

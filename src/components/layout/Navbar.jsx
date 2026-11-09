@@ -119,7 +119,7 @@ export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
             />
             <div className="hidden lg:block border-l border-slate-300 pl-3">
               <h1 className="text-sm font-bold text-iei-navy-900 leading-tight font-serif">
-                MJR IAE DASHBOARD
+                IEI DASHBOARD SYSTEM
               </h1>
               <p className="text-[11px] font-bold text-amber-600 tracking-wide uppercase">
                 The Institution of Engineers (India)

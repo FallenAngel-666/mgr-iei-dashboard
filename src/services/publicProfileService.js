@@ -45,7 +45,7 @@ export const DEFAULT_PUBLIC_PROFILE = {
   ],
 
   // Google Form URL for Student Membership Card
-  membershipFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc-iei-student-membership/viewform',
+  membershipFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLScd31MirxM6OjdMjEz_cL1AcwNJDdQ-y8nmyllHBmNkNarUlw/viewform?usp=publish-editor',
 
   // Official contact persons: Sriman Narayana Moorthy & Geethalakshmi (Student Chairman Elect)
   contacts: [
@@ -73,8 +73,8 @@ export const DEFAULT_PUBLIC_PROFILE = {
   upcomingEvents: []
 };
 
-const PROFILE_STORAGE_KEY = 'iei_public_profile_v6';
-const EVENTS_STORAGE_KEY = 'iei_public_events_v6';
+const PROFILE_STORAGE_KEY = 'iei_public_profile_v7';
+const EVENTS_STORAGE_KEY = 'iei_public_events_v7';
 
 function getLocalData(key, fallback) {
   try {
@@ -112,6 +112,11 @@ function getLocalData(key, fallback) {
 
     if (parsed && parsed.aboutChapterHeading && parsed.aboutChapterHeading.includes('MJR IAE')) {
       parsed.aboutChapterHeading = 'About MGR IEI Student Chapter';
+    }
+
+    // Auto-migrate membership Google Form URL if missing or outdated default
+    if (parsed && (!parsed.membershipFormUrl || parsed.membershipFormUrl.includes('QLSc-iei-student-membership'))) {
+      parsed.membershipFormUrl = DEFAULT_PUBLIC_PROFILE.membershipFormUrl;
     }
 
     // Auto-migrate carousel photos: remove logos and strip titles/captions
