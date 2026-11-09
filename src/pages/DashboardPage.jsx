@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subscribeToData } from '../services/firebaseService';
-import { WORK_STATUSES, isFirstLevelApprover, isStaffCoordinator } from '../config/roles';
+import { WORK_STATUSES, isFirstLevelApprover, isStaffCoordinator, canAccessMembersDirectory } from '../config/roles';
 
 // Components
 import { Navbar } from '../components/layout/Navbar';
@@ -178,9 +178,28 @@ export function DashboardPage() {
               />
             )}
 
-            {/* MEMBERS DIRECTORY TAB */}
+            {/* MEMBERS DIRECTORY TAB - Strictly restricted to Sri Priyan, Ramya Sri, and Master Administrator */}
             {activeTab === 'members' && (
-              <MembersList members={members} />
+              canAccessMembersDirectory(currentUser) ? (
+                <MembersList members={members} />
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-md mx-auto my-12 shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                    🔒
+                  </div>
+                  <h3 className="text-base font-bold text-iei-navy-950">Confidential Directory Access Restricted</h3>
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                    The Chapter Membership Directory is confidential and strictly accessible only by 
+                    <strong className="text-iei-navy-900 block mt-1">Sri Priyan (Joint Secretary) &amp; Ramya Sri (Membership Director)</strong>
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('dashboard')}
+                    className="mt-5 px-4 py-2 bg-iei-navy-900 hover:bg-iei-navy-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  >
+                    Return to Chapter Dashboard
+                  </button>
+                </div>
+              )
             )}
 
             {/* EVENTS TAB */}

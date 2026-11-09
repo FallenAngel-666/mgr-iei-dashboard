@@ -29,8 +29,8 @@ import {
 import { generateUsername, generateStrongPassword } from './credentialService.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
-// v5 prefix ensures Administrator (Master User) and Staff Login credentials load cleanly
-const STORAGE_PREFIX = 'iei_mgr_v5_';
+// v6 prefix ensures meeting broadcast & directory privacy permissions load cleanly
+const STORAGE_PREFIX = 'iei_mgr_v6_';
 
 function getLocalData(key, fallback) {
   try {
@@ -62,7 +62,7 @@ let certificatesStore = getLocalData('certificates', INITIAL_CERTIFICATES);
 let achievementsStore = getLocalData('achievements', INITIAL_ACHIEVEMENTS);
 let notificationsStore = getLocalData('notifications', INITIAL_NOTIFICATIONS);
 
-// Purge legacy v1, v2, v3, and v4 localStorage keys if present to ensure complete purity
+// Purge legacy v1, v2, v3, v4, and v5 localStorage keys if present to ensure complete purity
 if (typeof localStorage !== 'undefined') {
   try {
     ['members', 'tasks', 'updates', 'events', 'attendance', 'announcements', 'certificates', 'achievements', 'notifications'].forEach((k) => {
@@ -70,6 +70,7 @@ if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('iei_mgr_v2_' + k);
       localStorage.removeItem('iei_mgr_v3_' + k);
       localStorage.removeItem('iei_mgr_v4_' + k);
+      localStorage.removeItem('iei_mgr_v5_' + k);
     });
   } catch (e) {
     // ignore
@@ -148,6 +149,7 @@ export function subscribeToData(channel, callback) {
 if (typeof window !== 'undefined') {
   try {
     const collectionsToSync = [
+      { name: 'iei_members', channel: 'members', getStore: () => membersStore, setStore: (s) => { membersStore = s; } },
       { name: 'iei_tasks', channel: 'tasks', getStore: () => tasksStore, setStore: (s) => { tasksStore = s; } },
       { name: 'iei_updates', channel: 'updates', getStore: () => updatesStore, setStore: (s) => { updatesStore = s; } },
       { name: 'iei_events', channel: 'events', getStore: () => eventsStore, setStore: (s) => { eventsStore = s; } },
@@ -360,23 +362,51 @@ export async function getEvents() {
   return [...eventsStore];
 }
 
-export async function createEvent(eventData) {
+export async function createEvent(eventData, author = null) {
+  const eventAuthor = author || eventData.author || {
+    name: eventData.scheduledByName || 'Chapter Directorate',
+    role: eventData.scheduledByRole || 'Joint Secretary'
+  };
+
   const newEvent = {
     ...eventData,
     id: `evt-${Date.now()}`,
     isUpcoming: new Date(eventData.date) >= new Date(new Date().toISOString().split('T')[0]),
     hasAttendanceRecord: false,
+    scheduledByName: eventAuthor.name,
+    scheduledByRole: eventAuthor.role,
     createdAt: new Date().toISOString()
   };
   eventsStore.unshift(newEvent);
   notify('events', [...eventsStore]);
   syncToFirestore('iei_events', newEvent.id, newEvent);
 
-  // Notify members of upcoming event
+  // 1. Auto-broadcast into Community Updates Stream (Chat Box)
+  if (eventData.broadcastToChat !== false) {
+    const chatContent = `📅 OFFICIAL MEETING SCHEDULED: "${newEvent.title}"\n🗓️ Date: ${newEvent.date} | ⏰ Clock Time: ${newEvent.time}\n📍 Venue: ${newEvent.venue}\n📋 Agenda: ${newEvent.description || 'Statutory review and committee proceedings'}\nScheduled by: ${eventAuthor.name} (${eventAuthor.role}). All designated members are requested to attend promptly.`;
+
+    await createCommunityUpdate({
+      author: eventAuthor,
+      content: chatContent,
+      attachmentName: 'Official_Meeting_Notice.pdf'
+    });
+  }
+
+  // 2. Auto-broadcast into Circular Announcement Register
+  if (eventData.broadcastToCircular !== false) {
+    await createAnnouncement({
+      title: `Official Meeting Notice: ${newEvent.title}`,
+      priority: 'High',
+      content: `Notice is hereby issued for ${newEvent.title} (${newEvent.category}) scheduled on ${newEvent.date} at ${newEvent.time} in ${newEvent.venue}. Agenda: ${newEvent.description || 'Official committee business and task distribution'}. Attendance is mandatory for designated members.`,
+      author: eventAuthor
+    });
+  }
+
+  // 3. Notify members of upcoming event
   await createNotification({
     recipientId: 'all',
-    title: `Official Event Scheduled: ${newEvent.title}`,
-    message: `${newEvent.category} scheduled on ${newEvent.date} at ${newEvent.venue}.`,
+    title: `Official Meeting Scheduled: ${newEvent.title}`,
+    message: `${newEvent.category} scheduled on ${newEvent.date} at ${newEvent.time} in ${newEvent.venue}.`,
     type: 'event',
     linkId: newEvent.id
   });

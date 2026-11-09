@@ -38,8 +38,7 @@ export const FIRST_LEVEL_APPROVER_ROLES = [
 // Final approvers: Administrator (Master User) and Staff Coordinator
 export const FINAL_APPROVER_ROLES = [
   ROLES.ADMINISTRATOR,
-  ROLES.STAFF_COORDINATOR,
-  'Admin (Staff Coordinator)'
+  ROLES.STAFF_COORDINATOR
 ];
 
 export const WORK_STATUSES = {
@@ -63,7 +62,6 @@ export function isFirstLevelApprover(role) {
 export function isStaffCoordinator(role) {
   return (
     role === ROLES.STAFF_COORDINATOR ||
-    role === 'Admin (Staff Coordinator)' ||
     isMasterAdmin(role)
   );
 }
@@ -77,22 +75,61 @@ export function canAssignWork(role) {
   );
 }
 
-export function canManageMembers(role) {
-  return (
-    isMasterAdmin(role) ||
-    isStaffCoordinator(role) ||
-    role === ROLES.MEMBERSHIP_DIRECTOR ||
-    role === ROLES.SECRETARY
-  );
+/**
+ * Confidential Membership Directory Access:
+ * STRICT RULE: Only Sri Priyan (Joint Secretary), Ramya Sri (Membership Director),
+ * and the Master Administrator can view and access the Membership Directory.
+ * Blocked for all other committee members and staff.
+ */
+export function canAccessMembersDirectory(user) {
+  if (!user) return false;
+  
+  // Master Administrator always has full access
+  if (isMasterAdmin(user.role) || (user.username || '').toLowerCase() === 'admin.master-01') {
+    return true;
+  }
+  
+  const username = (user.username || '').toLowerCase();
+  const email = (user.email || '').toLowerCase();
+  const name = (user.name || '').toUpperCase();
+
+  const isSriPriyan = 
+    username === 'sripriyan.jsec-01' || 
+    email === 'sri.priyan.s.2607@gmail.com' || 
+    (name.includes('SRIPRIYAN') && user.role === ROLES.JOINT_SECRETARY);
+
+  const isRamyaSri = 
+    username === 'ramya.memdir-01' || 
+    username === 'ramya.emhead-01' || 
+    email === 'ramyoshiii017@gmail.com' || 
+    (name.includes('RAMYA') && name.includes('SRI') && user.role === ROLES.MEMBERSHIP_DIRECTOR);
+
+  return Boolean(isSriPriyan || isRamyaSri);
 }
 
+export function canManageMembers(userOrRole) {
+  if (!userOrRole) return false;
+  if (typeof userOrRole === 'string') {
+    return isMasterAdmin(userOrRole);
+  }
+  return canAccessMembersDirectory(userOrRole);
+}
+
+/**
+ * Event Scheduling & Updates Permissions:
+ * Chairmen (Chairman, Vice Chairman) and Secretaries (Secretary, Joint Secretary),
+ * Event Management Head, Staff Coordinator, and Master Administrator can all
+ * schedule meetings and update events.
+ */
 export function canManageEvents(role) {
   return (
     isMasterAdmin(role) ||
     isStaffCoordinator(role) ||
-    role === ROLES.EVENT_MANAGEMENT_HEAD ||
+    role === ROLES.CHAIRMAN ||
+    role === ROLES.VICE_CHAIRMAN ||
     role === ROLES.SECRETARY ||
-    role === ROLES.CHAIRMAN
+    role === ROLES.JOINT_SECRETARY ||
+    role === ROLES.EVENT_MANAGEMENT_HEAD
   );
 }
 
@@ -108,6 +145,8 @@ export function canRecordAttendance(role) {
   return (
     isMasterAdmin(role) ||
     isStaffCoordinator(role) ||
+    role === ROLES.CHAIRMAN ||
+    role === ROLES.VICE_CHAIRMAN ||
     role === ROLES.SECRETARY ||
     role === ROLES.JOINT_SECRETARY ||
     role === ROLES.EVENT_MANAGEMENT_HEAD

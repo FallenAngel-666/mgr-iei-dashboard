@@ -7,7 +7,9 @@ import {
   isStaffCoordinator, 
   isMasterAdmin,
   canAssignWork, 
-  canManageMembers, 
+  canManageMembers,
+  canAccessMembersDirectory,
+  canManageEvents,
   canRecordAttendance,
   canOverrideAnything
 } from '../src/config/roles.js';
@@ -191,10 +193,11 @@ async function runTestSuite() {
     assert.strictEqual(alan.role, ROLES.VICE_CHAIRMAN);
   });
 
-  test('Event Management Head Ramya Sri has ramya.emhead-01', () => {
+  test('Membership Director Ramya Sri has ramya.memdir-01 (with backward-compatible alias)', () => {
     const ramya = loadedMembers.find((m) => m.name.includes('RAMYA'));
-    assert.strictEqual(ramya.username, 'ramya.emhead-01');
-    assert.strictEqual(ramya.role, ROLES.EVENT_MANAGEMENT_HEAD);
+    assert.ok(ramya, 'Ramya Sri should exist');
+    assert.strictEqual(ramya.username, 'ramya.memdir-01');
+    assert.strictEqual(ramya.role, ROLES.MEMBERSHIP_DIRECTOR);
   });
 
   test('Treasurer Lokeshvari and Joint Treasurer Kalaivani have official usernames', () => {
@@ -207,10 +210,11 @@ async function runTestSuite() {
     assert.strictEqual(kalai.role, ROLES.JOINT_TREASURER);
   });
 
-  test('Membership Director Swathi Nandhana has swathi.memdir-01', () => {
+  test('Event Management Head Swathi Nandhana has swathi.emhead-01', () => {
     const swathi = loadedMembers.find((m) => m.name.includes('SWATHI'));
-    assert.strictEqual(swathi.username, 'swathi.memdir-01');
-    assert.strictEqual(swathi.role, ROLES.MEMBERSHIP_DIRECTOR);
+    assert.ok(swathi, 'Swathi Nandhana should exist');
+    assert.strictEqual(swathi.username, 'swathi.emhead-01');
+    assert.strictEqual(swathi.role, ROLES.EVENT_MANAGEMENT_HEAD);
   });
 
   test('Executive members have sequential exec tags (aakanish.exec-01 to saiswaroopa.exec-11)', () => {
@@ -218,6 +222,64 @@ async function runTestSuite() {
     assert.strictEqual(execs.length, 11, 'Should have exactly 11 executive members');
     const firstExec = execs.find((m) => m.username === 'aakanish.exec-01');
     assert.ok(firstExec, 'First exec should be aakanish.exec-01');
+  });
+
+  // 2b. STRICT PRIVACY & PERMISSIONS AUDIT
+  console.log('\n--- 2b. Strict Privacy: Confidential Membership Directory Access ---');
+  test('Membership Directory is ONLY accessible to Sri Priyan, Ramya Sri, and Master Admin', () => {
+    const sriPriyan = loadedMembers.find((m) => m.name.includes('SRIPRIYAN'));
+    const ramyaSri = loadedMembers.find((m) => m.name.includes('RAMYA'));
+    const masterAdmin = loadedMembers.find((m) => m.role === ROLES.ADMINISTRATOR);
+    const chairman = loadedMembers.find((m) => m.name.includes('SRIMAN'));
+    const viceChairman = loadedMembers.find((m) => m.name.includes('ALAN'));
+    const secretary = loadedMembers.find((m) => m.name.includes('MARIYA'));
+    const staff = loadedMembers.find((m) => m.role === ROLES.STAFF_COORDINATOR);
+    const treasurer = loadedMembers.find((m) => m.role === ROLES.TREASURER);
+    const execMember = loadedMembers.find((m) => m.role === ROLES.EXECUTIVE_MEMBER);
+
+    // Permitted (Strictly only 3)
+    assert.strictEqual(canAccessMembersDirectory(sriPriyan), true, 'Sri Priyan MUST have directory access');
+    assert.strictEqual(canAccessMembersDirectory(ramyaSri), true, 'Ramya Sri MUST have directory access');
+    assert.strictEqual(canAccessMembersDirectory(masterAdmin), true, 'Master Administrator MUST have directory access');
+
+    // Forbidden (All other roles blocked)
+    assert.strictEqual(canAccessMembersDirectory(chairman), false, 'Chairman must NOT see directory');
+    assert.strictEqual(canAccessMembersDirectory(viceChairman), false, 'Vice Chairman must NOT see directory');
+    assert.strictEqual(canAccessMembersDirectory(secretary), false, 'Secretary must NOT see directory');
+    assert.strictEqual(canAccessMembersDirectory(staff), false, 'Staff Coordinator must NOT see directory');
+    assert.strictEqual(canAccessMembersDirectory(treasurer), false, 'Treasurer must NOT see directory');
+    assert.strictEqual(canAccessMembersDirectory(execMember), false, 'Executive Member must NOT see directory');
+
+    // Unauthorized person with Membership Director role title is blocked if identity is not Ramya Sri
+    const spoofedDirector = { name: 'John Doe', username: 'john.memdir-02', email: 'john@gmail.com', role: ROLES.MEMBERSHIP_DIRECTOR };
+    assert.strictEqual(canAccessMembersDirectory(spoofedDirector), false, 'Generic membership director without Ramya Sri identity is blocked');
+  });
+
+  test('canManageMembers strictly enforces authorized identity', () => {
+    const sriPriyan = loadedMembers.find((m) => m.name.includes('SRIPRIYAN'));
+    const ramyaSri = loadedMembers.find((m) => m.name.includes('RAMYA'));
+    const chairman = loadedMembers.find((m) => m.name.includes('SRIMAN'));
+
+    assert.strictEqual(canManageMembers(sriPriyan), true, 'Sri Priyan can manage members');
+    assert.strictEqual(canManageMembers(ramyaSri), true, 'Ramya Sri can manage members');
+    assert.strictEqual(canManageMembers(chairman), false, 'Chairman cannot manage members');
+    assert.strictEqual(canManageMembers(ROLES.JOINT_SECRETARY), false, 'Raw role string cannot bypass identity check');
+    assert.strictEqual(canManageMembers(ROLES.ADMINISTRATOR), true, 'Master Admin role string is permitted');
+  });
+
+  console.log('\n--- 2c. Event Scheduling Permissions ---');
+  test('Event scheduling allowed for Chairmen, Vice Chairman, Secretaries, Joint Secretary, Event Head, Staff, Admin', () => {
+    assert.strictEqual(canManageEvents(ROLES.CHAIRMAN), true, 'Chairman can manage events');
+    assert.strictEqual(canManageEvents(ROLES.VICE_CHAIRMAN), true, 'Vice Chairman can manage events');
+    assert.strictEqual(canManageEvents(ROLES.SECRETARY), true, 'Secretary can manage events');
+    assert.strictEqual(canManageEvents(ROLES.JOINT_SECRETARY), true, 'Joint Secretary can manage events');
+    assert.strictEqual(canManageEvents(ROLES.EVENT_MANAGEMENT_HEAD), true, 'Event Head can manage events');
+    assert.strictEqual(canManageEvents(ROLES.STAFF_COORDINATOR), true, 'Staff Coordinator can manage events');
+    assert.strictEqual(canManageEvents(ROLES.ADMINISTRATOR), true, 'Master Admin can manage events');
+
+    // Disallowed for general members
+    assert.strictEqual(canManageEvents(ROLES.TREASURER), false, 'Treasurer cannot manage events');
+    assert.strictEqual(canManageEvents(ROLES.EXECUTIVE_MEMBER), false, 'Executive member cannot manage events');
   });
 
   // 3. AUTOMATIC CREDENTIALS GENERATION FOR NEW MEMBERS
@@ -234,7 +296,15 @@ async function runTestSuite() {
 
     assert.ok(newlyAddedMember.id);
     assert.strictEqual(newlyAddedMember.username, 'kavitha.exec-12');
-    assert.ok(newlyAddedMember.password && newlyAddedMember.password.startsWith('IEI'));
+    assert.ok(newlyAddedMember.password && newlyAddedMember.password.startsWith('IEI#'), `Password must start with IEI#, got ${newlyAddedMember.password}`);
+  });
+
+  test('generateStrongPassword strictly enforces IEI# prefix format', () => {
+    for (let i = 0; i < 20; i++) {
+      const pwd = generateStrongPassword('TestUser');
+      assert.ok(pwd.startsWith('IEI#'), `Password must start with IEI#, got: ${pwd}`);
+      assert.ok(pwd.length >= 10, 'Password must have sufficient length');
+    }
   });
 
   test('Formatted credential notice can be copied for student distribution', () => {
@@ -407,18 +477,44 @@ async function runTestSuite() {
     assert.strictEqual(directReport.submittedReport.firstLevelApproval, null);
   });
 
-  // 8. COMMITTEE MEETING ATTENDANCE SCOPE
-  console.log('\n--- 8. Committee Meeting Attendance Strictly Scoped ---');
-  await asyncTest('Attendance is strictly linked to scheduled official chapter events/meetings', async () => {
-    const sec = loadedMembers.find((m) => m.role === ROLES.SECRETARY);
-    const event = await createEvent({
+  // 8. COMMITTEE MEETING SCHEDULING & AUTO-BROADCAST TO CHAT & CIRCULARS
+  console.log('\n--- 8. Committee Meeting Scheduling & Auto-Broadcast ---');
+  let scheduledMeetingEvent;
+  await asyncTest('Chairman or Secretary schedules a meeting with date and clock time, which auto-broadcasts to Updates chat and Circulars', async () => {
+    const sriPriyan = loadedMembers.find((m) => m.name.includes('SRIPRIYAN'));
+    assert.ok(canManageEvents(sriPriyan.role), 'Sri Priyan as Joint Secretary has authority to schedule meetings');
+
+    scheduledMeetingEvent = await createEvent({
       title: 'IEI Executive Committee General Body Meeting Q4',
       category: 'Committee Meeting',
       date: '2026-11-12',
       time: '14:30',
       venue: 'Mechanical Seminar Hall, Ground Floor',
       description: 'Review of upcoming symposium, accounts audit, and task distribution.'
-    });
+    }, sriPriyan);
+
+    assert.ok(scheduledMeetingEvent.id);
+    assert.strictEqual(scheduledMeetingEvent.date, '2026-11-12');
+    assert.strictEqual(scheduledMeetingEvent.time, '14:30');
+    assert.strictEqual(scheduledMeetingEvent.scheduledByName, sriPriyan.name);
+
+    // Verify auto-broadcast in Community Updates (Chat Box)
+    const updates = await getUpdates();
+    const chatBroadcast = updates.find((u) => u.content.includes('OFFICIAL MEETING SCHEDULED: "IEI Executive Committee General Body Meeting Q4"'));
+    assert.ok(chatBroadcast, 'Meeting must appear in the Community Updates chat box');
+    assert.ok(chatBroadcast.content.includes('2026-11-12'), 'Chat notice must state the calendar date');
+    assert.ok(chatBroadcast.content.includes('14:30'), 'Chat notice must state the clock time');
+
+    // Verify auto-broadcast in Circular Announcements
+    const announcements = await getAnnouncements();
+    const circularBroadcast = announcements.find((a) => a.title.includes('Official Meeting Notice: IEI Executive Committee General Body Meeting Q4'));
+    assert.ok(circularBroadcast, 'Meeting must appear in Circular Announcements');
+    assert.strictEqual(circularBroadcast.priority, 'High');
+  });
+
+  await asyncTest('Attendance is strictly linked to scheduled official chapter events/meetings', async () => {
+    const sec = loadedMembers.find((m) => m.role === ROLES.SECRETARY);
+    const event = scheduledMeetingEvent;
 
     const attRecord = await recordEventAttendance({
       eventId: event.id,

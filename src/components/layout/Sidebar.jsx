@@ -4,6 +4,7 @@ import {
   isFirstLevelApprover, 
   isStaffCoordinator,
   canManageMembers,
+  canAccessMembersDirectory,
   canAccessManagementReports
 } from '../../config/roles';
 import { 
@@ -100,6 +101,12 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
     }
   ];
 
+  const canSeeMembers = canAccessMembersDirectory(currentUser);
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.id === 'members' && !canSeeMembers) return false;
+    return true;
+  });
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -150,7 +157,7 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
             Management Modules
           </div>
 
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (

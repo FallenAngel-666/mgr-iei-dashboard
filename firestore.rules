@@ -13,7 +13,7 @@ service cloud.firestore {
     
     function isStaffCoordinator() {
       return isAuthenticated() && (
-        getUserRole() == 'Admin (Staff Coordinator)' ||
+        getUserRole() in ['Staff Coordinator', 'Administrator', 'Admin (Staff Coordinator)'] ||
         request.auth.token.email.matches('.*admin.*@drmgrdu\\.ac\\.in')
       );
     }
@@ -25,7 +25,24 @@ service cloud.firestore {
       );
     }
 
-    // Members / Users Collection
+    function isMembersDirectoryAuthorized() {
+      return isAuthenticated() && (
+        isStaffCoordinator() ||
+        request.auth.token.email in [
+          'sri.priyan.s.2607@gmail.com',
+          'ramyoshiii017@gmail.com',
+          'admin@drmgrdu.ac.in'
+        ]
+      );
+    }
+
+    // Members Directory & Committee Register
+    match /iei_members/{memberId} {
+      allow read: if isMembersDirectoryAuthorized();
+      allow write: if isMembersDirectoryAuthorized();
+    }
+
+    // User Profile Store
     match /iei_users/{userId} {
       allow read: if isAuthenticated();
       allow write: if isStaffCoordinator() || request.auth.uid == userId;

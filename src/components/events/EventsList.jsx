@@ -55,10 +55,10 @@ export function EventsList({ events = [], onNavigateToAttendance }) {
           {canCreate && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-iei-navy-900 hover:bg-iei-navy-800 text-white text-xs font-bold shadow-md transition-all shrink-0"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-iei-navy-900 hover:bg-iei-navy-800 text-white text-xs font-bold shadow-md transition-all shrink-0 cursor-pointer"
             >
               <Plus className="w-4 h-4 text-iei-gold-400" />
-              <span>Schedule New Event</span>
+              <span>Schedule Meeting / Event</span>
             </button>
           )}
         </div>
@@ -117,6 +117,18 @@ export function EventsList({ events = [], onNavigateToAttendance }) {
           <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
             <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <h4 className="text-sm font-bold text-slate-700">No events found in this view</h4>
+            <p className="text-xs text-slate-400 mt-1">
+              Chairmen, Secretaries, and Event Coordinators can schedule official chapter meetings and technical programs.
+            </p>
+            {canCreate && (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-iei-navy-900 hover:bg-iei-navy-800 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4 text-iei-gold-400" />
+                <span>Schedule Chapter Meeting / Event</span>
+              </button>
+            )}
           </div>
         ) : (
           filteredEvents.map((ev) => (

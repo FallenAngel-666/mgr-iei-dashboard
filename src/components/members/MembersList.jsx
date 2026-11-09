@@ -35,7 +35,7 @@ export function MembersList({ members = [] }) {
   const [copiedField, setCopiedField] = useState(null);
 
   const isMaster = isMasterAdmin(currentUser?.role);
-  const canEdit = canManageMembers(currentUser?.role) || isMaster;
+  const canEdit = canManageMembers(currentUser) || isMaster;
   const isAdmin = isStaffCoordinator(currentUser?.role) || isMaster;
 
   const copyToClipboard = (text, fieldName) => {

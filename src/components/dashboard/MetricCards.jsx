@@ -8,9 +8,11 @@ import {
   Calendar,
   Briefcase
 } from 'lucide-react';
-import { WORK_STATUSES } from '../../config/roles';
+import { WORK_STATUSES, canAccessMembersDirectory } from '../../config/roles';
+import { useAuth } from '../../context/AuthContext';
 
 export function MetricCards({ members = [], tasks = [], events = [], onNavigateToTab }) {
+  const { currentUser } = useAuth();
   const totalMembers = members.length;
   const totalTasks = tasks.length;
 
@@ -85,11 +87,17 @@ export function MetricCards({ members = [], tasks = [], events = [], onNavigateT
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
       {cards.map((c, i) => {
         const Icon = c.icon;
+        const isRestrictedTab = c.tab === 'members' && !canAccessMembersDirectory(currentUser);
         return (
           <div
             key={i}
-            onClick={() => onNavigateToTab && onNavigateToTab(c.tab)}
-            className={`p-4 rounded-xl bg-white border border-slate-200 border-l-4 shadow-xs hover:shadow-md transition-all cursor-pointer ${c.color}`}
+            onClick={() => {
+              if (isRestrictedTab) return;
+              if (onNavigateToTab) onNavigateToTab(c.tab);
+            }}
+            className={`p-4 rounded-xl bg-white border border-slate-200 border-l-4 shadow-xs transition-all ${
+              isRestrictedTab ? 'cursor-default opacity-85' : 'hover:shadow-md cursor-pointer'
+            } ${c.color}`}
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">

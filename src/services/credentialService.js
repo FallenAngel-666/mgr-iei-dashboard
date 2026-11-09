@@ -46,12 +46,11 @@ export function generateUsername(name = '', role = ROLES.EXECUTIVE_MEMBER, exist
 }
 
 /**
- * Generates a strong, random, unambiguous password
- * e.g., "IEI#Kavitha*7492" or "IEI$Staff@8391"
+ * Generates a strong, random, unambiguous institutional password strictly prefixed with IEI#
+ * e.g., "IEI#Kavitha*7492" or "IEI#Ramya*9164"
  */
 export function generateStrongPassword(name = '') {
   const symbols = ['*', '#', '$', '!', '@'];
-  const sym1 = symbols[Math.floor(Math.random() * symbols.length)];
   const sym2 = symbols[Math.floor(Math.random() * symbols.length)];
 
   // Clean name part if provided
@@ -67,7 +66,8 @@ export function generateStrongPassword(name = '') {
   // 4 random digits
   const randomDigits = Math.floor(1000 + Math.random() * 9000);
 
-  return `IEI${sym1}${cleanName}${sym2}${randomDigits}`;
+  // Strictly prefixed with IEI#
+  return `IEI#${cleanName}${sym2}${randomDigits}`;
 }
 
 /**
