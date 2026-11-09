@@ -12,8 +12,17 @@ import {
   canManageEvents,
   canRecordAttendance,
   canAccessProfileUpdate,
+  canAccessActivityConsole,
   canOverrideAnything
 } from '../src/config/roles.js';
+
+import {
+  getAuditLogs,
+  recordActivity,
+  subscribeToAuditLogs,
+  AUDIT_MODULES,
+  AUDIT_ACTIONS
+} from '../src/services/auditService.js';
 
 import {
   getPublicProfileConfig,
@@ -711,6 +720,115 @@ async function runTestSuite() {
     await deletePublicUpcomingEvent(pubEvent.id);
     const finalEvents = await getPublicUpcomingEvents();
     assert.strictEqual(finalEvents.length, 0, 'Cleanly restored to empty state');
+  });
+
+  // 13. IMMUTABLE SYSTEM ACTIVITY CONSOLE & AUDIT TRAIL ENGINE
+  console.log('\n--- 13. System Activity Console & Immutable Audit Engine ---');
+  test('Activity Console Access is strictly restricted to CBN Joint Secretary and Master Administrator ONLY', () => {
+    // 1. Master Administrator
+    const masterAdmin = loadedMembers.find((m) => m.role === ROLES.ADMINISTRATOR);
+    assert.strictEqual(canAccessActivityConsole(masterAdmin), true, 'Master Admin must have access');
+    assert.strictEqual(canAccessActivityConsole(ROLES.ADMINISTRATOR), true, 'Administrator role string must have access');
+
+    // 2. CBN Joint Secretary (Sri Priyan S)
+    const sriPriyan = loadedMembers.find((m) => m.username === 'sripriyan.jsec-01');
+    assert.strictEqual(canAccessActivityConsole(sriPriyan), true, 'Sri Priyan (Joint Secretary) must have access');
+    assert.strictEqual(canAccessActivityConsole(ROLES.JOINT_SECRETARY), true, 'Joint Secretary role string must have access');
+
+    // 3. Strictly denied for all other 9 roles
+    const blockedRoles = [
+      ROLES.CHAIRMAN,
+      ROLES.VICE_CHAIRMAN,
+      ROLES.SECRETARY,
+      ROLES.EVENT_MANAGEMENT_HEAD,
+      ROLES.MEMBERSHIP_DIRECTOR,
+      ROLES.TREASURER,
+      ROLES.JOINT_TREASURER,
+      ROLES.EXECUTIVE_MEMBER,
+      ROLES.STAFF_COORDINATOR
+    ];
+
+    blockedRoles.forEach((role) => {
+      assert.strictEqual(
+        canAccessActivityConsole(role),
+        false,
+        `Role "${role}" must be strictly denied access to the System Activity Console`
+      );
+      const memberOfRole = loadedMembers.find((m) => m.role === role);
+      if (memberOfRole) {
+        assert.strictEqual(
+          canAccessActivityConsole(memberOfRole),
+          false,
+          `Member ${memberOfRole.name} (${role}) must be denied access`
+        );
+      }
+    });
+  });
+
+  await asyncTest('Automatic activity recording captures operations across all core modules', async () => {
+    const logs = await getAuditLogs();
+    assert.ok(logs.length > 0, 'Audit logs must contain recorded activities');
+
+    // Check module coverage in recorded logs
+    const recordedActions = logs.map((l) => l.action);
+    assert.ok(
+      recordedActions.includes(AUDIT_ACTIONS.WORK_TASK_ASSIGNED),
+      'Task assignments must generate an audit log entry'
+    );
+    assert.ok(
+      recordedActions.includes(AUDIT_ACTIONS.WORK_REPORT_SUBMITTED),
+      'Work report submission must generate an audit log entry'
+    );
+    assert.ok(
+      recordedActions.includes(AUDIT_ACTIONS.WORK_LEVEL1_APPROVED),
+      'First-level review approval must generate an audit log entry'
+    );
+    assert.ok(
+      recordedActions.includes(AUDIT_ACTIONS.WORK_FINAL_APPROVED),
+      'Final Staff Coordinator approval must generate an audit log entry'
+    );
+    assert.ok(
+      recordedActions.includes(AUDIT_ACTIONS.EVENT_CREATED),
+      'Event creation must generate an audit log entry'
+    );
+    assert.ok(
+      recordedActions.includes(AUDIT_ACTIONS.CHAT_MESSAGE_SENT),
+      'Chat/Community update must generate an audit log entry'
+    );
+  });
+
+  await asyncTest('Credentials and secrets are strictly redacted and never stored in audit logs', async () => {
+    // Record an event containing sensitive password and token fields
+    const testActor = loadedMembers.find((m) => m.username === 'sripriyan.jsec-01');
+    const recorded = await recordActivity({
+      actor: testActor,
+      action: 'SECURITY_TEST_OPERATION',
+      module: AUDIT_MODULES.SECURITY,
+      status: 'SUCCESS',
+      details: 'Automated compliance test for cryptographic sanitation',
+      targetId: 'sec-test-01',
+      previousValues: { password: 'PlainSecretPassword123!', apiKey: 'secret-token-xyz' },
+      newValues: { token: 'bearer-jwt-super-secret', safeField: 'Approved Status' }
+    });
+
+    assert.ok(recorded.id);
+    assert.strictEqual(recorded.previousValues.password, '[REDACTED_CREDENTIAL]');
+    assert.strictEqual(recorded.newValues.token, '[REDACTED_CREDENTIAL]');
+    assert.strictEqual(recorded.newValues.safeField, 'Approved Status');
+  });
+
+  test('Immutability guarantee: auditService provides zero delete, edit or clear mechanisms', () => {
+    import('../src/services/auditService.js').then((auditMod) => {
+      assert.strictEqual(typeof auditMod.recordActivity, 'function', 'recordActivity exists');
+      assert.strictEqual(typeof auditMod.getAuditLogs, 'function', 'getAuditLogs exists');
+      assert.strictEqual(typeof auditMod.subscribeToAuditLogs, 'function', 'subscribeToAuditLogs exists');
+
+      // Assert no delete or edit functions exist
+      assert.strictEqual(auditMod.deleteAuditLog, undefined, 'deleteAuditLog must not exist');
+      assert.strictEqual(auditMod.updateAuditLog, undefined, 'updateAuditLog must not exist');
+      assert.strictEqual(auditMod.clearAuditLogs, undefined, 'clearAuditLogs must not exist');
+      assert.strictEqual(auditMod.purgeAuditLogs, undefined, 'purgeAuditLogs must not exist');
+    });
   });
 
   console.log('\n================================================================');

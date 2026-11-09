@@ -6,7 +6,8 @@ import {
   canManageMembers,
   canAccessMembersDirectory,
   canAccessManagementReports,
-  canAccessProfileUpdate
+  canAccessProfileUpdate,
+  canAccessActivityConsole
 } from '../../config/roles';
 import { 
   LayoutDashboard, 
@@ -21,6 +22,7 @@ import {
   Trophy, 
   Megaphone,
   Globe,
+  Terminal,
   X,
   Building2
 } from 'lucide-react';
@@ -103,18 +105,26 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
     },
     {
       id: 'profileUpdate',
-      label: 'IAE Profile Update',
+      label: 'IEI Profile Update',
       icon: Globe,
+      badge: null
+    },
+    {
+      id: 'activityConsole',
+      label: 'System Activity Console',
+      icon: Terminal,
       badge: null
     }
   ];
 
   const canSeeMembers = canAccessMembersDirectory(currentUser);
   const canEditPublicProfile = canAccessProfileUpdate(role);
+  const canSeeConsole = canAccessActivityConsole(currentUser);
 
   const visibleNavItems = navItems.filter((item) => {
     if (item.id === 'members' && !canSeeMembers) return false;
     if (item.id === 'profileUpdate' && !canEditPublicProfile) return false;
+    if (item.id === 'activityConsole' && !canSeeConsole) return false;
     return true;
   });
 
@@ -144,7 +154,7 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
             />
             <div className="overflow-hidden">
               <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400 block font-serif">
-                MJR IAE DASHBOARD
+                MGR IEI DASHBOARD
               </span>
               <h2 className="text-sm font-bold text-white truncate">
                 Dr. M.G.R. Chapter

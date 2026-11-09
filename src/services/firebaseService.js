@@ -28,6 +28,7 @@ import {
 
 import { generateUsername, generateStrongPassword } from './credentialService.js';
 import { getISOWeekDetails } from '../utils/dateUtils.js';
+import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from './auditService.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
 // v8 prefix ensures Swathi Nandhana (Membership Director) & Ramya Sri (Event Management Head) roles load cleanly
@@ -221,6 +222,16 @@ export async function saveMember(member) {
     membersStore[existingIdx] = updated;
     notify('members', [...membersStore]);
     syncToFirestore('iei_members', updated.id, updated, true);
+
+    recordActivity({
+      action: AUDIT_ACTIONS.MEMBER_ROLE_CHANGED,
+      module: AUDIT_MODULES.MEMBERS,
+      status: 'SUCCESS',
+      details: `Member record updated for ${updated.name} (@${updated.username}). Role: ${updated.role}, Status: ${updated.status}.`,
+      targetId: updated.id,
+      newValues: { name: updated.name, role: updated.role, status: updated.status }
+    });
+
     return updated;
   } else {
     // Generate username and strong password automatically if not supplied
@@ -237,14 +248,33 @@ export async function saveMember(member) {
     membersStore.unshift(newMember);
     notify('members', [...membersStore]);
     syncToFirestore('iei_members', newMember.id, newMember);
+
+    recordActivity({
+      action: AUDIT_ACTIONS.MEMBER_CREATED,
+      module: AUDIT_MODULES.MEMBERS,
+      status: 'SUCCESS',
+      details: `New committee member registered: ${newMember.name} (@${newMember.username}) with role ${newMember.role}.`,
+      targetId: newMember.id,
+      newValues: { name: newMember.name, role: newMember.role, username: newMember.username }
+    });
+
     return newMember;
   }
 }
 
 export async function deleteMember(id) {
+  const target = membersStore.find((m) => m.id === id);
   membersStore = membersStore.filter((m) => m.id !== id);
   notify('members', [...membersStore]);
   syncDeleteFromFirestore('iei_members', id);
+
+  recordActivity({
+    action: AUDIT_ACTIONS.MEMBER_STATUS_CHANGED,
+    module: AUDIT_MODULES.MEMBERS,
+    status: 'SUCCESS',
+    details: `Member ${target?.name || id} removed from active register.`,
+    targetId: id
+  });
 }
 
 // --- TASKS ---
@@ -268,6 +298,17 @@ export async function createTask(taskData) {
   tasksStore.unshift(newTask);
   notify('tasks', [...tasksStore]);
   syncToFirestore('iei_tasks', newTask.id, newTask);
+
+  // Record audit trail
+  recordActivity({
+    actor: { name: newTask.assignedByName, role: newTask.assignedByRole, id: newTask.assignedById },
+    action: AUDIT_ACTIONS.WORK_TASK_ASSIGNED,
+    module: AUDIT_MODULES.WORK,
+    status: 'SUCCESS',
+    details: `Task "${newTask.title}" assigned to ${newTask.assignedToName} (${newTask.assignedToRole}). Due: ${newTask.dueDate || 'N/A'}.`,
+    targetId: newTask.id,
+    newValues: { title: newTask.title, assignedTo: newTask.assignedToName, weeklyTag: newTask.weeklyTag }
+  });
 
   // Create notification for assigned member
   await createNotification({
@@ -293,9 +334,18 @@ export async function updateTask(id, updates) {
 }
 
 export async function deleteTask(id) {
+  const target = tasksStore.find((t) => t.id === id);
   tasksStore = tasksStore.filter((t) => t.id !== id);
   notify('tasks', [...tasksStore]);
   syncDeleteFromFirestore('iei_tasks', id);
+
+  recordActivity({
+    action: AUDIT_ACTIONS.WORK_TASK_DELETED,
+    module: AUDIT_MODULES.WORK,
+    status: 'SUCCESS',
+    details: `Task "${target?.title || id}" removed from register.`,
+    targetId: id
+  });
 }
 
 export async function addTaskProgressUpdate(taskId, updateMessage, author) {
@@ -338,6 +388,17 @@ export async function createCommunityUpdate({ author, content, imageUrl, attachm
   updatesStore.unshift(newUpdate);
   notify('updates', [...updatesStore]);
   syncToFirestore('iei_updates', newUpdate.id, newUpdate);
+
+  // Record audit trail
+  recordActivity({
+    actor: author,
+    action: AUDIT_ACTIONS.CHAT_MESSAGE_SENT,
+    module: AUDIT_MODULES.CHAT,
+    status: 'SUCCESS',
+    details: `Community work update posted by ${author.name}: "${content.substring(0, 80)}"`,
+    targetId: newUpdate.id,
+    newValues: { content: content.substring(0, 100), attachmentName }
+  });
 
   // Notify chapter members
   await createNotification({
@@ -386,6 +447,17 @@ export async function createEvent(eventData, author = null) {
   notify('events', [...eventsStore]);
   syncToFirestore('iei_events', newEvent.id, newEvent);
 
+  // Record audit trail
+  recordActivity({
+    actor: eventAuthor,
+    action: AUDIT_ACTIONS.EVENT_CREATED,
+    module: AUDIT_MODULES.EVENTS,
+    status: 'SUCCESS',
+    details: `Official meeting scheduled: "${newEvent.title}" on ${newEvent.date} at ${newEvent.time} in ${newEvent.venue}.`,
+    targetId: newEvent.id,
+    newValues: { title: newEvent.title, date: newEvent.date, time: newEvent.time, venue: newEvent.venue }
+  });
+
   // 1. Auto-broadcast into Community Updates Stream (Chat Box)
   if (eventData.broadcastToChat !== false) {
     const chatContent = `📅 OFFICIAL MEETING SCHEDULED: "${newEvent.title}"\n🗓️ Date: ${newEvent.date} | ⏰ Clock Time: ${newEvent.time}\n📍 Venue: ${newEvent.venue}\n📋 Agenda: ${newEvent.description || 'Statutory review and committee proceedings'}\nScheduled by: ${eventAuthor.name} (${eventAuthor.role}). All designated members are requested to attend promptly.`;
@@ -425,6 +497,16 @@ export async function updateEvent(id, updates) {
     eventsStore[idx] = { ...eventsStore[idx], ...updates };
     notify('events', [...eventsStore]);
     syncToFirestore('iei_events', id, updates, true);
+
+    recordActivity({
+      action: AUDIT_ACTIONS.EVENT_UPDATED,
+      module: AUDIT_MODULES.EVENTS,
+      status: 'SUCCESS',
+      details: `Official meeting/event ${id} details updated.`,
+      targetId: id,
+      newValues: updates
+    });
+
     return eventsStore[idx];
   }
   return null;
@@ -454,6 +536,17 @@ export async function recordEventAttendance({ eventId, eventTitle, category, dat
   attendanceStore.unshift(newAttendance);
   notify('attendance', [...attendanceStore]);
   syncToFirestore('iei_attendance', newAttendance.id, newAttendance);
+
+  // Record audit trail
+  recordActivity({
+    actor: recordedBy,
+    action: AUDIT_ACTIONS.EVENT_ATTENDANCE_RECORDED,
+    module: AUDIT_MODULES.EVENTS,
+    status: 'SUCCESS',
+    details: `Official meeting attendance recorded for "${eventTitle}" (${category}) on ${date}. Attendees: ${records?.length || 0}.`,
+    targetId: newAttendance.id,
+    newValues: { eventId, date, attendeesCount: records?.length || 0 }
+  });
 
   // Mark the corresponding event as having attendance record
   const evIdx = eventsStore.findIndex((e) => e.id === eventId);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subscribeToData } from '../services/firebaseService';
-import { WORK_STATUSES, isFirstLevelApprover, isStaffCoordinator, canAccessMembersDirectory, canAccessProfileUpdate } from '../config/roles';
+import { WORK_STATUSES, isFirstLevelApprover, isStaffCoordinator, canAccessMembersDirectory, canAccessProfileUpdate, canAccessActivityConsole } from '../config/roles';
 
 // Components
 import { Navbar } from '../components/layout/Navbar';
@@ -27,6 +27,8 @@ import { CertificatesList } from '../components/certificates/CertificatesList';
 import { AchievementsList } from '../components/achievements/AchievementsList';
 import { AnnouncementsList } from '../components/announcements/AnnouncementsList';
 import { ProfileUpdateView } from '../components/profile/ProfileUpdateView';
+import { SystemActivityConsole } from '../components/console/SystemActivityConsole';
+import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from '../services/auditService';
 
 export function DashboardPage() {
   const { currentUser } = useAuth();
@@ -69,6 +71,20 @@ export function DashboardPage() {
       unsubAchievements();
     };
   }, []);
+
+  // Security access violation recording for unauthorized navigation
+  useEffect(() => {
+    if (activeTab === 'activityConsole' && !canAccessActivityConsole(currentUser)) {
+      recordActivity({
+        actor: currentUser,
+        action: AUDIT_ACTIONS.SECURITY_ACCESS_DENIED,
+        module: AUDIT_MODULES.SECURITY,
+        status: 'DENIED',
+        details: `Unauthorized navigation attempt to System Activity Console by ${currentUser?.name || 'Guest'} (${currentUser?.role || 'Unknown'}). Access blocked.`,
+        targetId: 'activityConsole'
+      });
+    }
+  }, [activeTab, currentUser]);
 
   // Compute pending approvals for active user
   const role = currentUser?.role || '';
@@ -239,7 +255,7 @@ export function DashboardPage() {
               <AnnouncementsList announcements={announcements} />
             )}
 
-            {/* IAE PROFILE UPDATE TAB - Strictly restricted to Chairman, Vice Chairman, Secretary, Joint Secretary, Admin */}
+            {/* IEI PROFILE UPDATE TAB - Strictly restricted to Chairman, Vice Chairman, Secretary, Joint Secretary, Admin */}
             {activeTab === 'profileUpdate' && (
               canAccessProfileUpdate(currentUser?.role) ? (
                 <ProfileUpdateView />
@@ -250,12 +266,36 @@ export function DashboardPage() {
                   </div>
                   <h3 className="text-base font-bold text-iei-navy-950 font-serif">Directorate Access Restricted</h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                    The IAE Profile Update section is exclusively accessible to 
+                    The IEI Profile Update section is exclusively accessible to 
                     <strong className="text-iei-navy-900 block mt-1">Chairman, Vice Chairman, Secretary &amp; Joint Secretary</strong>
                   </p>
                   <button
                     onClick={() => setActiveTab('dashboard')}
                     className="mt-5 px-4 py-2 bg-iei-navy-900 hover:bg-iei-navy-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  >
+                    Return to Chapter Dashboard
+                  </button>
+                </div>
+              )
+            )}
+
+            {/* SYSTEM ACTIVITY CONSOLE TAB - Strictly restricted to CBN Joint Secretary and Master Administrator */}
+            {activeTab === 'activityConsole' && (
+              canAccessActivityConsole(currentUser) ? (
+                <SystemActivityConsole />
+              ) : (
+                <div className="bg-[#0b0f19] border border-rose-600/40 rounded-2xl p-8 text-center max-w-md mx-auto my-12 shadow-2xl font-mono text-slate-300">
+                  <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-500 text-rose-400 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                    🚫
+                  </div>
+                  <h3 className="text-base font-bold text-rose-400">ACCESS DENIED — CLEARANCE REQUIRED</h3>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                    The System Activity Console is strictly restricted to:
+                    <strong className="text-emerald-400 block mt-1">CBN Joint Secretary &amp; Master Administrator</strong>
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('dashboard')}
+                    className="mt-5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-lg text-xs font-bold transition-all shadow-xs"
                   >
                     Return to Chapter Dashboard
                   </button>

@@ -37,6 +37,29 @@ service cloud.firestore {
       );
     }
 
+    function isActivityConsoleAuthorized() {
+      return isAuthenticated() && (
+        getUserRole() in ['Administrator', 'Joint Secretary'] ||
+        request.auth.token.email in [
+          'sri.priyan.s.2607@gmail.com',
+          'admin@drmgrdu.ac.in'
+        ]
+      );
+    }
+
+    // SYSTEM ACTIVITY CONSOLE: IMMUTABLE AUDIT LOGS
+    match /system_audit_logs/{logId} {
+      // Read access is strictly restricted to CBN Joint Secretary & Master Administrator
+      allow read: if isActivityConsoleAuthorized();
+      
+      // Append is permitted for recording operations
+      allow create: if true;
+      
+      // ABSOLUTE IMMUTABILITY: Updating or deleting audit logs is forbidden for all roles without exception
+      allow update: if false;
+      allow delete: if false;
+    }
+
     // Public Welcome Page Profile (Public Read, Directorate Write)
     match /iei_public_profile/{docId} {
       allow read: if true;
@@ -71,7 +94,6 @@ service cloud.firestore {
     match /iei_tasks/{taskId} {
       allow read: if isAuthenticated();
       allow create: if isFirstLevelApprover();
-      // Only staff coordinator can finalize status to Completed
       allow update: if isAuthenticated() && (
         isStaffCoordinator() ||
         (isFirstLevelApprover() && request.resource.data.status != 'Completed') ||

@@ -7,6 +7,7 @@ import {
   onAuthStateChanged 
 } from '../config/firebase';
 import { getMembers } from '../services/firebaseService';
+import { recordActivity, AUDIT_MODULES, AUDIT_ACTIONS } from '../services/auditService';
 
 const AuthContext = createContext(null);
 
@@ -64,6 +65,17 @@ export function AuthProvider({ children }) {
         // Successful authentication
         setCurrentUser(matched);
         setLoading(false);
+
+        // Record audit activity
+        recordActivity({
+          actor: matched,
+          action: AUDIT_ACTIONS.AUTH_LOGIN,
+          module: AUDIT_MODULES.AUTH,
+          status: 'SUCCESS',
+          details: `User ${matched.name} (@${matched.username}) authenticated successfully as ${matched.role}.`,
+          targetId: matched.id
+        });
+
         return { success: true, user: matched };
       }
 
@@ -81,6 +93,16 @@ export function AuthProvider({ children }) {
           };
           setCurrentUser(fbUser);
           setLoading(false);
+
+          recordActivity({
+            actor: fbUser,
+            action: AUDIT_ACTIONS.AUTH_LOGIN,
+            module: AUDIT_MODULES.AUTH,
+            status: 'SUCCESS',
+            details: `User ${fbUser.name} authenticated via Firebase Auth as ${fbUser.role}.`,
+            targetId: fbUser.id
+          });
+
           return { success: true, user: fbUser };
         } catch (fbErr) {
           throw new Error('Invalid institutional credentials. Please enter a valid username/email and password.');
@@ -89,6 +111,16 @@ export function AuthProvider({ children }) {
 
       throw new Error('User not found. Please verify your official IEI username or registered email address.');
     } catch (err) {
+      // Record audit failure
+      recordActivity({
+        actor: { username: (usernameOrEmail || 'anonymous').trim().toLowerCase(), name: 'Unauthenticated User', role: 'Guest' },
+        action: AUDIT_ACTIONS.AUTH_LOGIN_FAILED,
+        module: AUDIT_MODULES.AUTH,
+        status: 'FAILED',
+        details: `Authentication failed for identifier: ${(usernameOrEmail || '').trim()}. Reason: ${err.message}`,
+        targetId: (usernameOrEmail || 'N/A').trim().toLowerCase()
+      });
+
       setAuthError(err.message);
       setLoading(false);
       return { success: false, error: err.message };
@@ -97,6 +129,17 @@ export function AuthProvider({ children }) {
 
   // Logout handler
   async function logout() {
+    if (currentUser) {
+      recordActivity({
+        actor: currentUser,
+        action: AUDIT_ACTIONS.AUTH_LOGOUT,
+        module: AUDIT_MODULES.AUTH,
+        status: 'SUCCESS',
+        details: `User ${currentUser.name} (@${currentUser.username}) signed out of institutional session.`,
+        targetId: currentUser.id
+      });
+    }
+
     try {
       await fbSignOut(auth);
     } catch (e) {
@@ -110,6 +153,15 @@ export function AuthProvider({ children }) {
 
   // Password reset
   async function resetPassword(email) {
+    recordActivity({
+      actor: { email, name: email, role: 'Applicant' },
+      action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET,
+      module: AUDIT_MODULES.AUTH,
+      status: 'SUCCESS',
+      details: `Institutional password reset dispatched to ${email}.`,
+      targetId: email
+    });
+
     try {
       await sendPasswordResetEmail(auth, email);
       return { success: true, message: `Password reset instructions dispatched to ${email}.` };

@@ -1,5 +1,6 @@
 import { ROLES, WORK_STATUSES, FIRST_LEVEL_APPROVER_ROLES, isFirstLevelApprover, isStaffCoordinator } from '../config/roles.js';
 import { updateTask, createNotification } from './firebaseService.js';
+import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from './auditService.js';
 
 /**
  * Submits a work report for an assigned task.
@@ -33,6 +34,17 @@ export async function submitWorkReport(task, reportData, submitter) {
     status: newStatus,
     progress: 100,
     submittedReport: report
+  });
+
+  // Record audit trail
+  recordActivity({
+    actor: submitter,
+    action: AUDIT_ACTIONS.WORK_REPORT_SUBMITTED,
+    module: AUDIT_MODULES.WORK,
+    status: 'SUCCESS',
+    details: `Work report submitted by ${submitter.name} (${submitter.role}) for task "${task.title}". Status transitioned to ${newStatus}.`,
+    targetId: task.id,
+    newValues: { status: newStatus, summary: reportData.summary }
   });
 
   // Distribute targeted notifications
@@ -90,6 +102,18 @@ export async function processFirstLevelReview(task, approver, decision, remarks)
       submittedReport: report
     });
 
+    // Record audit trail
+    recordActivity({
+      actor: approver,
+      action: AUDIT_ACTIONS.WORK_LEVEL1_APPROVED,
+      module: AUDIT_MODULES.WORK,
+      status: 'SUCCESS',
+      details: `First-level review approved by ${approver.name} (${approver.role}) for "${task.title}". Remarks: "${remarks || 'Approved'}".`,
+      targetId: task.id,
+      previousValues: { status: task.status },
+      newValues: { status: WORK_STATUSES.PENDING_FINAL, remarks }
+    });
+
     // Notify Staff Coordinator for Final Approval
     await createNotification({
       recipientRole: ROLES.STAFF_COORDINATOR,
@@ -122,6 +146,18 @@ export async function processFirstLevelReview(task, approver, decision, remarks)
     const updatedTask = await updateTask(task.id, {
       status: WORK_STATUSES.REJECTED,
       submittedReport: report
+    });
+
+    // Record audit trail
+    recordActivity({
+      actor: approver,
+      action: AUDIT_ACTIONS.WORK_REJECTED,
+      module: AUDIT_MODULES.WORK,
+      status: 'SUCCESS',
+      details: `First-level review returned report for "${task.title}" by ${approver.name} (${approver.role}). Reason: "${remarks || 'Returned for revision'}".`,
+      targetId: task.id,
+      previousValues: { status: task.status },
+      newValues: { status: WORK_STATUSES.REJECTED, reason: remarks }
     });
 
     // Notify submitting member
@@ -169,6 +205,18 @@ export async function processFinalApproval(task, approver, decision, remarks) {
       submittedReport: report
     });
 
+    // Record audit trail
+    recordActivity({
+      actor: approver,
+      action: AUDIT_ACTIONS.WORK_FINAL_APPROVED,
+      module: AUDIT_MODULES.WORK,
+      status: 'SUCCESS',
+      details: `Final Staff Coordinator approval granted by ${approver.name} (${approver.role}) for task "${task.title}". Status is now Completed.`,
+      targetId: task.id,
+      previousValues: { status: task.status },
+      newValues: { status: WORK_STATUSES.COMPLETED, remarks }
+    });
+
     // Notify the submitting member of completion
     await createNotification({
       recipientId: task.assignedToId,
@@ -203,6 +251,18 @@ export async function processFinalApproval(task, approver, decision, remarks) {
     const updatedTask = await updateTask(task.id, {
       status: WORK_STATUSES.REJECTED,
       submittedReport: report
+    });
+
+    // Record audit trail
+    recordActivity({
+      actor: approver,
+      action: AUDIT_ACTIONS.WORK_REJECTED,
+      module: AUDIT_MODULES.WORK,
+      status: 'SUCCESS',
+      details: `Final Staff Coordinator review returned report for "${task.title}" by ${approver.name} (${approver.role}). Reason: "${remarks || 'Returned by Staff Coordinator'}".`,
+      targetId: task.id,
+      previousValues: { status: task.status },
+      newValues: { status: WORK_STATUSES.REJECTED, reason: remarks }
     });
 
     // Notify the submitting member

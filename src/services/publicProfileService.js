@@ -4,8 +4,10 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   onSnapshot
 } from '../config/firebase.js';
+import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from './auditService.js';
 
 // Default institutional public profile configuration
 export const DEFAULT_PUBLIC_PROFILE = {
@@ -240,6 +242,20 @@ export async function savePublicProfileConfig(updates, author = null) {
   };
   notifyProfile();
 
+  // Record audit trail
+  const isCarousel = Boolean(updates.carouselPhotos);
+  recordActivity({
+    actor: author,
+    action: isCarousel ? AUDIT_ACTIONS.GALLERY_UPDATED : AUDIT_ACTIONS.PROFILE_UPDATED,
+    module: isCarousel ? AUDIT_MODULES.GALLERY : AUDIT_MODULES.PROFILE,
+    status: 'SUCCESS',
+    details: isCarousel
+      ? `Public photo gallery carousel updated with ${updates.carouselPhotos?.length || 5} institutional photographs.`
+      : `Public chapter profile updated by ${author?.name || 'Authorized Officer'}.`,
+    targetId: 'main_config',
+    newValues: updates
+  });
+
   // Async sync to Firestore
   try {
     const profileDocRef = doc(db, 'iei_public_profile', 'main_config');
@@ -272,6 +288,16 @@ export async function savePublicUpcomingEvent(eventData, author = null) {
   }
   notifyEvents();
 
+  recordActivity({
+    actor: author,
+    action: AUDIT_ACTIONS.EVENT_CREATED,
+    module: AUDIT_MODULES.EVENTS,
+    status: 'SUCCESS',
+    details: `Public upcoming event published: "${newEvent.title}" (${newEvent.category || 'Technical'}).`,
+    targetId: newEvent.id,
+    newValues: { title: newEvent.title, date: newEvent.date, venue: newEvent.venue }
+  });
+
   try {
     const eventDocRef = doc(db, 'iei_public_events', newEvent.id);
     await setDoc(eventDocRef, newEvent);
@@ -283,12 +309,20 @@ export async function savePublicUpcomingEvent(eventData, author = null) {
 }
 
 export async function deletePublicUpcomingEvent(eventId) {
+  const target = publicEventsStore.find((e) => e.id === eventId);
   publicEventsStore = publicEventsStore.filter((e) => e.id !== eventId);
   notifyEvents();
 
+  recordActivity({
+    action: AUDIT_ACTIONS.EVENT_DELETED,
+    module: AUDIT_MODULES.EVENTS,
+    status: 'SUCCESS',
+    details: `Public upcoming event "${target?.title || eventId}" removed from public homepage.`,
+    targetId: eventId
+  });
+
   try {
     const eventDocRef = doc(db, 'iei_public_events', eventId);
-    const { deleteDoc } = await import('../config/firebase.js');
     await deleteDoc(eventDocRef);
   } catch (err) {
     console.warn('Firestore public event delete error (cached offline):', err);

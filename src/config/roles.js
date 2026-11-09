@@ -195,3 +195,37 @@ export function canAccessProfileUpdate(role) {
 export function canOverrideAnything(role) {
   return isMasterAdmin(role);
 }
+
+/**
+ * System Activity Console Access:
+ * STRICT RULE: Only CBN Joint Secretary and Master Administrator can access
+ * the System Activity Console.
+ * Strictly blocked for all other 9 roles (Chairman, Vice Chairman, Secretary,
+ * Event Head, Membership Director, Treasurer, Joint Treasurer, Executive Member, Staff Coordinator).
+ */
+export function canAccessActivityConsole(userOrRole) {
+  if (!userOrRole) return false;
+
+  const role = typeof userOrRole === 'string' ? userOrRole : userOrRole.role;
+  const username = typeof userOrRole === 'object' ? (userOrRole.username || '').toLowerCase() : '';
+  const email = typeof userOrRole === 'object' ? (userOrRole.email || '').toLowerCase() : '';
+  const name = typeof userOrRole === 'object' ? (userOrRole.name || '').toUpperCase() : '';
+
+  // 1. Master Administrator
+  if (isMasterAdmin(role) || username === 'admin.master-01') {
+    return true;
+  }
+
+  // 2. CBN Joint Secretary (Sri Priyan S)
+  if (
+    role === ROLES.JOINT_SECRETARY ||
+    username === 'sripriyan.jsec-01' ||
+    email === 'sri.priyan.s.2607@gmail.com' ||
+    (name.includes('SRIPRIYAN') && role === ROLES.JOINT_SECRETARY)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
