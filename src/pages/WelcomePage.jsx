@@ -433,7 +433,7 @@ export function WelcomePage({ onNavigateToLogin }) {
             Chapter Photo Gallery
           </h2>
           <p className="text-xs text-slate-400 mt-2">
-            Official chapter photographs in continuous automatic slideshow rotation (1 second loop)
+            Official chapter photographs in continuous automatic slideshow rotation
           </p>
         </div>
 

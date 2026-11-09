@@ -28,19 +28,19 @@ export const DEFAULT_PUBLIC_PROFILE = {
   carouselPhotos: [
     {
       id: 'photo-1',
-      url: '/assets/gallery/gallery-1-best-chapter-award.jpg'
+      url: '/assets/gallery/gallery-1-rain26-cultural-fest.jpg'
     },
     {
       id: 'photo-2',
-      url: '/assets/gallery/gallery-2-rain26-cultural-fest.jpg'
+      url: '/assets/gallery/gallery-2-rain26-valedictory.jpg'
     },
     {
       id: 'photo-3',
-      url: '/assets/gallery/gallery-3-rain26-valedictory.jpg'
+      url: '/assets/gallery/gallery-3-presidential-felicitation.jpg'
     },
     {
       id: 'photo-4',
-      url: '/assets/gallery/gallery-4-presidential-felicitation.jpg'
+      url: '/assets/gallery/gallery-4-state-centre-delegation.jpg'
     }
   ],
 
@@ -73,8 +73,8 @@ export const DEFAULT_PUBLIC_PROFILE = {
   upcomingEvents: []
 };
 
-const PROFILE_STORAGE_KEY = 'iei_public_profile_v7';
-const EVENTS_STORAGE_KEY = 'iei_public_events_v7';
+const PROFILE_STORAGE_KEY = 'iei_public_profile_v8';
+const EVENTS_STORAGE_KEY = 'iei_public_events_v8';
 
 function getLocalData(key, fallback) {
   try {

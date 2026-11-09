@@ -8,19 +8,29 @@ export function PhotoCarousel({ photos = [] }) {
 
   // Fallback default photos if empty (Strictly chapter photographs without logos or text overlays)
   const activePhotos = Array.isArray(photos) && photos.length > 0 ? photos : [
-    { id: 'p1', url: '/assets/gallery/gallery-1-best-chapter-award.jpg' },
-    { id: 'p2', url: '/assets/gallery/gallery-2-rain26-cultural-fest.jpg' },
-    { id: 'p3', url: '/assets/gallery/gallery-3-rain26-valedictory.jpg' },
-    { id: 'p4', url: '/assets/gallery/gallery-4-presidential-felicitation.jpg' }
+    { id: 'p1', url: '/assets/gallery/gallery-1-rain26-cultural-fest.jpg' },
+    { id: 'p2', url: '/assets/gallery/gallery-2-rain26-valedictory.jpg' },
+    { id: 'p3', url: '/assets/gallery/gallery-3-presidential-felicitation.jpg' },
+    { id: 'p4', url: '/assets/gallery/gallery-4-state-centre-delegation.jpg' }
   ];
 
-  // Automatic rotation: changes every ONE SECOND (1000ms) continuously in a loop
+  // Preload all carousel images into memory for instant, tear-free transitions
+  useEffect(() => {
+    activePhotos.forEach((photo) => {
+      if (typeof window !== 'undefined' && photo?.url) {
+        const img = new window.Image();
+        img.src = photo.url;
+      }
+    });
+  }, [activePhotos]);
+
+  // Automatic rotation: smooth, professional 4-second loop
   useEffect(() => {
     if (isPaused || activePhotos.length <= 1) return;
 
     timerRef.current = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % activePhotos.length);
-    }, 1000);
+    }, 4000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -42,20 +52,21 @@ export function PhotoCarousel({ photos = [] }) {
       onMouseLeave={() => setIsPaused(false)}
     >
       {/* 16:9 / 21:9 Aspect Ratio Container ensuring zero distortion */}
-      <div className="relative h-72 sm:h-96 md:h-[480px] w-full flex items-center justify-center bg-radial from-slate-800 to-slate-950 p-2 sm:p-4">
+      <div className="relative h-72 sm:h-96 md:h-[480px] w-full flex items-center justify-center bg-slate-950 p-2 sm:p-4">
         {activePhotos.map((photo, index) => (
           <div
             key={photo.id || index}
-            className={`absolute inset-0 flex items-center justify-center p-2 sm:p-4 transition-opacity duration-300 ease-in-out ${
+            className={`absolute inset-0 flex items-center justify-center p-2 sm:p-4 transition-opacity duration-500 ease-in-out ${
               index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
             {/* Image display strictly preserving natural proportions without stretching or captions */}
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center overflow-hidden">
               <img
                 src={photo.url}
                 alt={`MGR IEI Chapter Photograph ${index + 1}`}
-                className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-2xl transition-transform duration-500 hover:scale-101"
+                className="max-h-full max-w-full object-contain rounded-2xl select-none transition-transform duration-700 hover:scale-102"
+                loading="eager"
               />
             </div>
           </div>
@@ -79,10 +90,10 @@ export function PhotoCarousel({ photos = [] }) {
         <ChevronRight className="w-5 h-5" />
       </button>
 
-      {/* Top Banner Indicator (1-Second Auto-Rotation Badge) */}
-      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 bg-slate-950/70 backdrop-blur-sm border border-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-iei-gold-300">
-        <Sparkles className="w-3 h-3 text-iei-gold-400 animate-spin" />
-        <span>Auto-Rotation (1s loop)</span>
+      {/* Top Banner Indicator */}
+      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 bg-slate-950/75 backdrop-blur-sm border border-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-iei-gold-300 shadow-sm">
+        <Sparkles className="w-3 h-3 text-iei-gold-400" />
+        <span>Chapter Highlights</span>
         <button
           onClick={() => setIsPaused(!isPaused)}
           className="ml-1 text-slate-300 hover:text-white"
