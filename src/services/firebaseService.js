@@ -95,6 +95,33 @@ function notify(channel, data) {
   }
 }
 
+// Background Firestore synchronization helper (resilient dual-write)
+async function syncToFirestore(colName, docId, data, isMerge = false) {
+  try {
+    if (typeof window !== 'undefined' && db && docId) {
+      const docRef = doc(db, colName, String(docId));
+      if (isMerge) {
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        await setDoc(docRef, data);
+      }
+    }
+  } catch (err) {
+    // Cloud sync failure does not break local operations; local storage is already safely committed
+  }
+}
+
+async function syncDeleteFromFirestore(colName, docId) {
+  try {
+    if (typeof window !== 'undefined' && db && docId) {
+      const docRef = doc(db, colName, String(docId));
+      await deleteDoc(docRef);
+    }
+  } catch (err) {
+    // Resilient
+  }
+}
+
 // Subscribe helper
 export function subscribeToData(channel, callback) {
   if (!subscribers[channel]) return () => {};
@@ -114,6 +141,42 @@ export function subscribeToData(channel, callback) {
   }
 
   return () => subscribers[channel].delete(callback);
+}
+
+// Initialize background cloud listeners when in browser environment
+if (typeof window !== 'undefined') {
+  try {
+    const collectionsToSync = [
+      { name: 'iei_tasks', channel: 'tasks', getStore: () => tasksStore, setStore: (s) => { tasksStore = s; } },
+      { name: 'iei_updates', channel: 'updates', getStore: () => updatesStore, setStore: (s) => { updatesStore = s; } },
+      { name: 'iei_events', channel: 'events', getStore: () => eventsStore, setStore: (s) => { eventsStore = s; } },
+      { name: 'iei_attendance', channel: 'attendance', getStore: () => attendanceStore, setStore: (s) => { attendanceStore = s; } },
+      { name: 'iei_announcements', channel: 'announcements', getStore: () => announcementsStore, setStore: (s) => { announcementsStore = s; } }
+    ];
+
+    collectionsToSync.forEach(({ name, channel, getStore, setStore }) => {
+      onSnapshot(collection(db, name), (snapshot) => {
+        if (!snapshot.empty) {
+          const cloudItems = [];
+          snapshot.forEach((d) => cloudItems.push({ id: d.id, ...d.data() }));
+          if (cloudItems.length > 0) {
+            const currentMap = new Map(getStore().map(item => [item.id, item]));
+            cloudItems.forEach(item => currentMap.set(item.id, item));
+            const merged = Array.from(currentMap.values());
+            setStore(merged);
+            setLocalData(channel, merged);
+            if (subscribers[channel]) {
+              subscribers[channel].forEach((cb) => cb(merged));
+            }
+          }
+        }
+      }, () => {
+        // Fallback gracefully without throwing
+      });
+    });
+  } catch (e) {
+    // Graceful offline fallback
+  }
 }
 
 // Reset store back to clean slate if requested
@@ -151,6 +214,7 @@ export async function saveMember(member) {
     };
     membersStore[existingIdx] = updated;
     notify('members', [...membersStore]);
+    syncToFirestore('iei_members', updated.id, updated, true);
     return updated;
   } else {
     // Generate username and strong password automatically if not supplied
@@ -166,6 +230,7 @@ export async function saveMember(member) {
     };
     membersStore.unshift(newMember);
     notify('members', [...membersStore]);
+    syncToFirestore('iei_members', newMember.id, newMember);
     return newMember;
   }
 }
@@ -173,6 +238,7 @@ export async function saveMember(member) {
 export async function deleteMember(id) {
   membersStore = membersStore.filter((m) => m.id !== id);
   notify('members', [...membersStore]);
+  syncDeleteFromFirestore('iei_members', id);
 }
 
 // --- TASKS ---
@@ -193,6 +259,7 @@ export async function createTask(taskData) {
   };
   tasksStore.unshift(newTask);
   notify('tasks', [...tasksStore]);
+  syncToFirestore('iei_tasks', newTask.id, newTask);
 
   // Create notification for assigned member
   await createNotification({
@@ -211,6 +278,7 @@ export async function updateTask(id, updates) {
   if (idx >= 0) {
     tasksStore[idx] = { ...tasksStore[idx], ...updates, updatedAt: new Date().toISOString() };
     notify('tasks', [...tasksStore]);
+    syncToFirestore('iei_tasks', id, updates, true);
     return tasksStore[idx];
   }
   return null;
@@ -219,6 +287,7 @@ export async function updateTask(id, updates) {
 export async function deleteTask(id) {
   tasksStore = tasksStore.filter((t) => t.id !== id);
   notify('tasks', [...tasksStore]);
+  syncDeleteFromFirestore('iei_tasks', id);
 }
 
 export async function addTaskProgressUpdate(taskId, updateMessage, author) {
@@ -236,6 +305,7 @@ export async function addTaskProgressUpdate(taskId, updateMessage, author) {
     task.status = 'In Progress';
     task.updatedAt = new Date().toISOString();
     notify('tasks', [...tasksStore]);
+    syncToFirestore('iei_tasks', taskId, { updates: task.updates, status: task.status, updatedAt: task.updatedAt }, true);
     return task;
   }
 }
@@ -259,6 +329,7 @@ export async function createCommunityUpdate({ author, content, imageUrl, attachm
   };
   updatesStore.unshift(newUpdate);
   notify('updates', [...updatesStore]);
+  syncToFirestore('iei_updates', newUpdate.id, newUpdate);
 
   // Notify chapter members
   await createNotification({
@@ -279,6 +350,7 @@ export async function toggleUpdateReaction(updateId, reactionType = 'like') {
     current[reactionType] = (current[reactionType] || 0) + 1;
     updatesStore[idx].reactions = current;
     notify('updates', [...updatesStore]);
+    syncToFirestore('iei_updates', updateId, { reactions: current }, true);
   }
 }
 
@@ -297,6 +369,7 @@ export async function createEvent(eventData) {
   };
   eventsStore.unshift(newEvent);
   notify('events', [...eventsStore]);
+  syncToFirestore('iei_events', newEvent.id, newEvent);
 
   // Notify members of upcoming event
   await createNotification({
@@ -315,6 +388,7 @@ export async function updateEvent(id, updates) {
   if (idx >= 0) {
     eventsStore[idx] = { ...eventsStore[idx], ...updates };
     notify('events', [...eventsStore]);
+    syncToFirestore('iei_events', id, updates, true);
     return eventsStore[idx];
   }
   return null;
@@ -343,6 +417,7 @@ export async function recordEventAttendance({ eventId, eventTitle, category, dat
 
   attendanceStore.unshift(newAttendance);
   notify('attendance', [...attendanceStore]);
+  syncToFirestore('iei_attendance', newAttendance.id, newAttendance);
 
   // Mark the corresponding event as having attendance record
   const evIdx = eventsStore.findIndex((e) => e.id === eventId);
@@ -350,6 +425,7 @@ export async function recordEventAttendance({ eventId, eventTitle, category, dat
     eventsStore[evIdx].hasAttendanceRecord = true;
     eventsStore[evIdx].attendanceId = newAttendance.id;
     notify('events', [...eventsStore]);
+    syncToFirestore('iei_events', eventId, { hasAttendanceRecord: true, attendanceId: newAttendance.id }, true);
   }
 
   return newAttendance;
@@ -373,6 +449,7 @@ export async function createAnnouncement({ title, priority, content, attachmentN
   };
   announcementsStore.unshift(newAnn);
   notify('announcements', [...announcementsStore]);
+  syncToFirestore('iei_announcements', newAnn.id, newAnn);
 
   // Notify all members
   await createNotification({

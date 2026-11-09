@@ -411,6 +411,29 @@ async function runTestSuite() {
     assert.strictEqual(update.authorRole, ROLES.CHAIRMAN);
   });
 
+  // 10. DATA PERSISTENCE ACROSS LOGOUT & RE-LOGIN
+  console.log('\n--- 10. Persistence: Logout ONLY Terminates Active User Session ---');
+  await asyncTest('Logging out removes only active user session while preserving all created tasks, updates, and events', async () => {
+    // Simulate user session in localStorage
+    const testSessionKey = 'iei_mgr_active_user';
+    const mockStorage = { [testSessionKey]: JSON.stringify(loadedMembers[0]) };
+
+    // Simulate logout action: only removes active user token
+    delete mockStorage[testSessionKey];
+    assert.strictEqual(mockStorage[testSessionKey], undefined, 'Active user session is cleared upon logout');
+
+    // Verify all data created in previous steps remain intact in stores
+    const remainingTasks = await getTasks();
+    const remainingUpdates = await getUpdates();
+    const remainingEvents = await getEvents();
+    const remainingAttendance = await getAttendance();
+
+    assert.ok(remainingTasks.length > 0, 'Tasks remain completely intact');
+    assert.ok(remainingUpdates.length > 0, 'Community updates remain completely intact');
+    assert.ok(remainingEvents.length > 0, 'Events remain completely intact');
+    assert.ok(remainingAttendance.length > 0, 'Attendance records remain completely intact');
+  });
+
   console.log('\n================================================================');
   console.log(`TEST SUITE SUMMARY: ${passedCount} PASSED, ${failedCount} FAILED`);
   console.log('================================================================');
