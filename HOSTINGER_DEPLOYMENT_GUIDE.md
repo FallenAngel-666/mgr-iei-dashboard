@@ -189,6 +189,6 @@ node scripts/firestore-restore.mjs backups/iei-firestore-backup-YYYY-MM-DDTHH-MM
 7. [ ] Activate Free Let's Encrypt SSL in Hostinger hPanel → Security → SSL.
 8. [ ] Add `your-domain.com` and `www.your-domain.com` in **Firebase Console → Authentication → Settings → Authorized domains**.
 9. [ ] Restrict `VITE_FIREBASE_API_KEY` HTTP referrers to your custom domain in Google Cloud Console.
-10. [ ] Run `npm run deploy:rules` to publish updated `storage.rules` and `firestore.indexes.json` to Firebase.
+10. [ ] **Enable Firebase Storage:** Open Firebase Console → **Storage** → click **Get Started** (not yet initialized on the Firebase project — until enabled, uploads safely use automatic compressed inline fallback via `src/utils/uploadHelper.js`), then run `firebase deploy --only storage:rules`.
 11. [ ] Change default Master Administrator & Staff Coordinator passwords immediately after initial production verification.
 12. [ ] Upgrade Firebase to Blaze plan (with a monthly budget alert) before onboarding 1,500+ registered student members.
