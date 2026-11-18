@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Users, 
@@ -13,11 +13,13 @@ import {
   KeyRound,
   Copy,
   Check,
-  UserCheck
+  UserCheck,
+  Award
 } from 'lucide-react';
 import { canManageMembers, isStaffCoordinator, isMasterAdmin, ROLE_LIST, ROLES } from '../../config/roles';
 import { MemberFormModal } from './MemberFormModal';
 import { deleteMember } from '../../services/firebaseService';
+import { subscribeToPublicProfile, DEFAULT_PUBLIC_PROFILE } from '../../services/publicProfileService';
 import { formatCredentialNotice } from '../../services/credentialService';
 import { Modal } from '../common/Modal';
 
@@ -26,6 +28,14 @@ export function MembersList({ members = [] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [publicProfile, setPublicProfile] = useState(DEFAULT_PUBLIC_PROFILE);
+
+  useEffect(() => {
+    const unsub = subscribeToPublicProfile((prof) => {
+      if (prof) setPublicProfile(prof);
+    });
+    return () => unsub();
+  }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
@@ -94,6 +104,63 @@ export function MembersList({ members = [] }) {
               <span>Add Committee Member</span>
             </button>
           )}
+        </div>
+
+        {/* Institutional Patronage: Mentor, Faculty Advisor & Official IEI Mail */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pb-4 border-b border-slate-100">
+          <div className="p-3.5 rounded-xl bg-iei-navy-950 text-white border border-iei-navy-800 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-400/15 text-amber-400 shrink-0">
+              <Award className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
+                {publicProfile.mentor?.roleLabel || 'Mentor'}
+              </span>
+              <p className="text-xs font-bold text-white truncate">
+                {publicProfile.mentor?.name || 'Dr. L. Ramesh'}
+              </p>
+              <p className="text-[11px] text-slate-300 truncate">
+                {publicProfile.mentor?.designation || 'Past Chairman'}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-iei-navy-950 text-white border border-iei-navy-800 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-400/15 text-amber-400 shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
+                {publicProfile.facultyAdvisor?.roleLabel || 'Faculty Advisor'}
+              </span>
+              <p className="text-xs font-bold text-white truncate">
+                {publicProfile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}
+              </p>
+              <p className="text-[11px] text-slate-300 truncate">
+                {publicProfile.facultyAdvisor?.designation || 'Add. Secretary'}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-iei-navy-950 text-amber-400 shrink-0">
+              <Mail className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">
+                Official IEI Mail ID
+              </span>
+              <a
+                href={`mailto:${publicProfile.officialEmail || 'iei@drmgrdu.ac.in'}`}
+                className="text-xs font-bold text-iei-navy-950 hover:text-amber-700 block truncate transition-colors mt-0.5"
+              >
+                {publicProfile.officialEmail || 'iei@drmgrdu.ac.in'}
+              </a>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                MGR IEI Student Chapter Office
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Filter Bar */}

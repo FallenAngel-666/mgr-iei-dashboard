@@ -213,9 +213,11 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
         <div className="shrink-0 p-3 border-t border-iei-navy-800 bg-iei-navy-950/70">
           <div className="flex items-center gap-2.5">
             <Building2 className="w-5 h-5 text-iei-gold-400 shrink-0" />
-            <div className="text-[11px] leading-tight text-slate-300">
+            <div className="text-[11px] leading-tight text-slate-300 min-w-0">
               <span className="font-semibold text-white block">Official Chapter Portal</span>
-              <span className="text-[10px] text-slate-400">Dr. M.G.R. DU, Chennai-95</span>
+              <a href="mailto:iei@drmgrdu.ac.in" className="text-[10px] text-iei-gold-400 hover:text-amber-300 block truncate transition-colors">
+                iei@drmgrdu.ac.in
+              </a>
             </div>
           </div>
         </div>

@@ -203,7 +203,9 @@ export function LoginPage({ onBackToWelcome }) {
         </div>
         <div className="flex items-center gap-4 text-slate-400">
           <span>Chartered by Royal Charter 1935</span>
-          <span>ISO 21001:2018 Certified</span>
+          <a href="mailto:iei@drmgrdu.ac.in" className="text-iei-gold-400 hover:text-amber-300 transition-colors">
+            iei@drmgrdu.ac.in
+          </a>
         </div>
       </div>
 

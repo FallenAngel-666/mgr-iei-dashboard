@@ -91,10 +91,14 @@ export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
             Dr. M.G.R. Educational and Research Institute (Deemed to be University)
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-3 text-slate-300">
-          <span>IEI Chapter Code: MGR-SC-1935</span>
-          <span className="text-slate-500">|</span>
-          <span className="text-iei-gold-400 font-semibold">ISO 21001:2018 Certified</span>
+        <div className="hidden md:flex items-center gap-2 text-slate-300">
+          <Mail className="w-3.5 h-3.5 text-iei-gold-400" />
+          <a
+            href="mailto:iei@drmgrdu.ac.in"
+            className="text-iei-gold-400 hover:text-amber-300 font-semibold transition-colors"
+          >
+            iei@drmgrdu.ac.in
+          </a>
         </div>
       </div>
 

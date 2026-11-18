@@ -47,6 +47,23 @@ export const DEFAULT_PUBLIC_PROFILE = {
   // Google Form URL for Student Membership Card
   membershipFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLScd31MirxM6OjdMjEz_cL1AcwNJDdQ-y8nmyllHBmNkNarUlw/viewform?usp=publish-editor',
 
+  // Official IEI Institutional Email
+  officialEmail: 'iei@drmgrdu.ac.in',
+
+  // Institutional Patronage: Mentor & Faculty Advisor
+  mentor: {
+    name: 'Dr. L. Ramesh',
+    designation: 'Past Chairman',
+    roleLabel: 'Mentor',
+    email: 'iei@drmgrdu.ac.in'
+  },
+  facultyAdvisor: {
+    name: 'Dr. Anthony Xavier',
+    designation: 'Add. Secretary',
+    roleLabel: 'Faculty Advisor',
+    email: 'iei@drmgrdu.ac.in'
+  },
+
   // Official contact persons: Sriman Narayana Moorthy & Geethalakshmi (Student Chairman Elect)
   contacts: [
     {
@@ -73,8 +90,8 @@ export const DEFAULT_PUBLIC_PROFILE = {
   upcomingEvents: []
 };
 
-const PROFILE_STORAGE_KEY = 'iei_public_profile_v8';
-const EVENTS_STORAGE_KEY = 'iei_public_events_v8';
+const PROFILE_STORAGE_KEY = 'iei_public_profile_v9';
+const EVENTS_STORAGE_KEY = 'iei_public_events_v9';
 
 function getLocalData(key, fallback) {
   try {
@@ -125,6 +142,13 @@ function getLocalData(key, fallback) {
         .filter((p) => !(p.url || '').includes('apk-logo') && !(p.url || '').includes('chapter-emblem') && !(p.url || '').includes('website-logo'))
         .map((p) => ({ id: p.id, url: p.url }));
       parsed.carouselPhotos = filtered.length > 0 ? filtered : DEFAULT_PUBLIC_PROFILE.carouselPhotos;
+    }
+
+    // Ensure official IEI email, Mentor, and Faculty Advisor are always populated
+    if (parsed) {
+      if (!parsed.officialEmail) parsed.officialEmail = DEFAULT_PUBLIC_PROFILE.officialEmail;
+      if (!parsed.mentor) parsed.mentor = DEFAULT_PUBLIC_PROFILE.mentor;
+      if (!parsed.facultyAdvisor) parsed.facultyAdvisor = DEFAULT_PUBLIC_PROFILE.facultyAdvisor;
     }
 
     return parsed;

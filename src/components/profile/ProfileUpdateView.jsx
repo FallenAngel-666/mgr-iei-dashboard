@@ -663,18 +663,113 @@ export function ProfileUpdateView() {
       )}
 
       {/* ============================================================ */}
-      {/* SUB-TAB 5: CONTACT DETAILS (SRIMAN & GEETHALAKSHMI)          */}
+      {/* SUB-TAB 5: CONTACT DETAILS (MENTOR, ADVISOR & CHAIRPERSONS)  */}
       {/* ============================================================ */}
       {activeSubTab === 'contacts' && (
         <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6">
           <div>
             <h3 className="text-sm font-bold text-iei-navy-950 flex items-center gap-2 font-serif">
               <Phone className="w-4 h-4 text-amber-600" />
-              <span>Section 6: Contact Persons (Sriman Narayana Moorthy &amp; Geethalakshmi)</span>
+              <span>Section 6: Patronage, Official Mail &amp; Contact Persons</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Maintain the contact details and clickable telephone links for Student Chairpersons Sriman Narayana Moorthy and Geethalakshmi.
+              Maintain official IEI email, Mentor, Faculty Advisor, and Student Chairpersons contact details displayed on the public portal.
             </p>
+          </div>
+
+          {/* Official IEI Email */}
+          <div className="p-5 rounded-2xl border border-amber-200 bg-amber-50/60 space-y-2">
+            <label className="block text-xs font-bold text-iei-navy-950">
+              Official IEI Institutional Email ID *
+            </label>
+            <input
+              type="email"
+              value={profile.officialEmail || 'iei@drmgrdu.ac.in'}
+              onChange={(e) => setProfile({ ...profile, officialEmail: e.target.value })}
+              placeholder="iei@drmgrdu.ac.in"
+              className="w-full max-w-md text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-iei-navy-500 bg-white font-semibold"
+            />
+          </div>
+
+          {/* Mentor & Faculty Advisor */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Mentor */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span className="text-xs font-black text-iei-navy-950 uppercase tracking-wide">
+                  {profile.mentor?.name || 'Dr. L. Ramesh'}
+                </span>
+                <span className="text-[10px] font-bold text-white bg-iei-navy-900 px-2 py-0.5 rounded">
+                  Mentor
+                </span>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Mentor Name *</label>
+                <input
+                  type="text"
+                  value={profile.mentor?.name || 'Dr. L. Ramesh'}
+                  onChange={(e) => setProfile({ ...profile, mentor: { ...(profile.mentor || DEFAULT_PUBLIC_PROFILE.mentor), name: e.target.value } })}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Designation *</label>
+                <input
+                  type="text"
+                  value={profile.mentor?.designation || 'Past Chairman'}
+                  onChange={(e) => setProfile({ ...profile, mentor: { ...(profile.mentor || DEFAULT_PUBLIC_PROFILE.mentor), designation: e.target.value } })}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Official Email *</label>
+                <input
+                  type="email"
+                  value={profile.mentor?.email || profile.officialEmail || 'iei@drmgrdu.ac.in'}
+                  onChange={(e) => setProfile({ ...profile, mentor: { ...(profile.mentor || DEFAULT_PUBLIC_PROFILE.mentor), email: e.target.value } })}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Faculty Advisor */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span className="text-xs font-black text-iei-navy-950 uppercase tracking-wide">
+                  {profile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}
+                </span>
+                <span className="text-[10px] font-bold text-white bg-iei-navy-900 px-2 py-0.5 rounded">
+                  Faculty Advisor
+                </span>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Faculty Advisor Name *</label>
+                <input
+                  type="text"
+                  value={profile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}
+                  onChange={(e) => setProfile({ ...profile, facultyAdvisor: { ...(profile.facultyAdvisor || DEFAULT_PUBLIC_PROFILE.facultyAdvisor), name: e.target.value } })}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Designation *</label>
+                <input
+                  type="text"
+                  value={profile.facultyAdvisor?.designation || 'Add. Secretary'}
+                  onChange={(e) => setProfile({ ...profile, facultyAdvisor: { ...(profile.facultyAdvisor || DEFAULT_PUBLIC_PROFILE.facultyAdvisor), designation: e.target.value } })}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Official Email *</label>
+                <input
+                  type="email"
+                  value={profile.facultyAdvisor?.email || profile.officialEmail || 'iei@drmgrdu.ac.in'}
+                  onChange={(e) => setProfile({ ...profile, facultyAdvisor: { ...(profile.facultyAdvisor || DEFAULT_PUBLIC_PROFILE.facultyAdvisor), email: e.target.value } })}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
