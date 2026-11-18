@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
+import { logProductionError } from '../../utils/errorLogger.js';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -16,7 +17,7 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('IEI DASHBOARD SYSTEM Error Caught by Boundary:', error, errorInfo);
+    logProductionError(error, 'REACT_ERROR_BOUNDARY');
     this.setState({ errorInfo });
   }
 

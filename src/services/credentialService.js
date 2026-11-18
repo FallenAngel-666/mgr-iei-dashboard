@@ -69,9 +69,26 @@ export function generateStrongPassword(name) {
 }
 
 /**
+ * Resolve production portal URL dynamically without hardcoding a specific host.
+ * Priority: VITE_APP_URL env var -> current browser origin -> fallback placeholder.
+ */
+export function getPortalBaseUrl() {
+  const envUrl =
+    typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_URL
+      ? String(import.meta.env.VITE_APP_URL).trim().replace(/\/+$/, '')
+      : '';
+  if (envUrl) return envUrl;
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return 'https://your-iei-portal-domain.com';
+}
+
+/**
  * Format official credential copy notice for distribution
  */
 export function formatCredentialNotice(member) {
+  const portalUrl = getPortalBaseUrl();
   return `--------------------------------------------------
 THE INSTITUTION OF ENGINEERS (INDIA)
 Dr. M.G.R. Educational & Research Institute
@@ -83,7 +100,7 @@ Username    : ${member.username}
 Password    : ${member.password}
 Email       : ${member.email}
 Phone       : ${member.phone || 'N/A'}
-Portal Link : https://mgr-iei-dashboard.web.app
+Portal Link : ${portalUrl}
 --------------------------------------------------
 Please save these credentials safely and do not share them.`;
 }

@@ -33,6 +33,7 @@ import {
   subscribeToPublicEvents,
   DEFAULT_PUBLIC_PROFILE 
 } from '../../services/publicProfileService';
+import { uploadInstitutionalImage } from '../../utils/uploadHelper';
 
 export function ProfileUpdateView() {
   const { currentUser } = useAuth();
@@ -135,15 +136,16 @@ export function ProfileUpdateView() {
     setProfile({ ...profile, carouselPhotos: updated });
   };
 
-  const handlePhotoFileUpload = (index, e) => {
+  const handlePhotoFileUpload = async (index, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      handlePhotoChange(index, 'url', reader.result);
-    };
-    reader.readAsDataURL(file);
+    setSaveError('');
+    try {
+      const result = await uploadInstitutionalImage(file, 'gallery');
+      handlePhotoChange(index, 'url', result.url);
+    } catch (err) {
+      setSaveError(err.message || 'Invalid image file. Use JPG, PNG, or WebP under 10 MB.');
+    }
   };
 
   // Contact Persons Updates (Sriman Narayana Moorthy & Geethalakshmi)
@@ -186,15 +188,16 @@ export function ProfileUpdateView() {
     setIsEventModalOpen(true);
   };
 
-  const handleEventPosterUpload = (e) => {
+  const handleEventPosterUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEventForm((prev) => ({ ...prev, posterUrl: reader.result }));
-    };
-    reader.readAsDataURL(file);
+    setSaveError('');
+    try {
+      const result = await uploadInstitutionalImage(file, 'event-posters');
+      setEventForm((prev) => ({ ...prev, posterUrl: result.url }));
+    } catch (err) {
+      setSaveError(err.message || 'Invalid event poster file. Use JPG, PNG, or WebP under 10 MB.');
+    }
   };
 
   const handleSaveEvent = async (e) => {

@@ -1,9 +1,30 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Helper: allow safe institutional media and document types only
+    function isAllowedContentType() {
+      return request.resource.contentType.matches('image/(jpeg|jpg|png|webp|gif)') ||
+             request.resource.contentType == 'application/pdf' ||
+             request.resource.contentType == 'text/plain' ||
+             request.resource.contentType == 'application/msword' ||
+             request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+
+    // Public chapter gallery, event posters, and profile photos (max 10 MB)
+    match /iei_uploads/{folder}/{fileName} {
+      allow read: if true;
+      allow write: if request.resource != null &&
+                      request.resource.size < 10 * 1024 * 1024 &&
+                      isAllowedContentType();
+      allow delete: if true;
+    }
+
+    // Fallback restricted rule for other chapter paths
     match /{allPaths=**} {
       allow read: if true;
-      allow write: if request.resource.size < 25 * 1024 * 1024;
+      allow write: if request.resource != null &&
+                      request.resource.size < 10 * 1024 * 1024 &&
+                      isAllowedContentType();
     }
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Users, 
@@ -14,7 +14,9 @@ import {
   Copy,
   Check,
   UserCheck,
-  Award
+  Award,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { canManageMembers, isStaffCoordinator, isMasterAdmin, ROLE_LIST, ROLES } from '../../config/roles';
 import { MemberFormModal } from './MemberFormModal';
@@ -54,19 +56,38 @@ export function MembersList({ members = [] }) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const filteredMembers = members.filter((m) => {
-    const matchesSearch =
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (m.username && m.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (m.department && m.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (m.membershipId && m.membershipId.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Pagination state (scales cleanly for 1,500+ registered members)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
 
-    const matchesRole = roleFilter === 'all' || m.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return members.filter((m) => {
+      const matchesSearch =
+        !q ||
+        (m.name && m.name.toLowerCase().includes(q)) ||
+        (m.username && m.username.toLowerCase().includes(q)) ||
+        (m.email && m.email.toLowerCase().includes(q)) ||
+        (m.department && m.department.toLowerCase().includes(q)) ||
+        (m.membershipId && m.membershipId.toLowerCase().includes(q));
 
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+      const matchesRole = roleFilter === 'all' || m.role === roleFilter;
+      const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [members, searchQuery, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedMembers = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredMembers.slice(start, start + pageSize);
+  }, [filteredMembers, safePage, pageSize]);
 
   const handleDelete = async (id, name) => {
     if (window.confirm(`Are you sure you want to remove member "${name}" from the active IEI chapter directory?`)) {
@@ -209,7 +230,7 @@ export function MembersList({ members = [] }) {
             <h4 className="text-sm font-bold text-slate-700">No committee members match your search</h4>
           </div>
         ) : (
-          filteredMembers.map((m) => (
+          paginatedMembers.map((m) => (
             <div
               key={m.id}
               className="bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all p-5 flex flex-col justify-between"
@@ -220,6 +241,7 @@ export function MembersList({ members = [] }) {
                     <img
                       src={m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=0B2545&color=fff`}
                       alt={m.name}
+                      loading="lazy"
                       className="w-12 h-12 rounded-full object-cover border-2 border-slate-200 shadow-2xs shrink-0"
                     />
                     <div>
@@ -318,6 +340,48 @@ export function MembersList({ members = [] }) {
           ))
         )}
       </div>
+
+      {/* Pagination Bar (activates automatically as directory scales to 1,500+ members) */}
+      {filteredMembers.length > pageSize && (
+        <div className="bg-white rounded-2xl border border-slate-200/90 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="text-slate-600 font-medium">
+            Showing <span className="font-bold text-iei-navy-950">{(safePage - 1) * pageSize + 1}</span>–
+            <span className="font-bold text-iei-navy-950">{Math.min(safePage * pageSize, filteredMembers.length)}</span> of{' '}
+            <span className="font-bold text-iei-navy-950">{filteredMembers.length}</span> members
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-slate-300 bg-white"
+              aria-label="Members per page"
+            >
+              <option value={24}>24 / page</option>
+              <option value={48}>48 / page</option>
+              <option value={96}>96 / page</option>
+            </select>
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Prev</span>
+            </button>
+            <span className="px-2 font-bold text-iei-navy-950">
+              Page {safePage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Member Form Modal (Add / Edit) */}
       <MemberFormModal

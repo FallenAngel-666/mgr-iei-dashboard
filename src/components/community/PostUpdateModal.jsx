@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../common/Modal';
 import { createCommunityUpdate } from '../../services/firebaseService';
+import { uploadInstitutionalImage } from '../../utils/uploadHelper';
 import { 
   Send, 
   Image as ImageIcon, 
@@ -17,6 +18,8 @@ export function PostUpdateModal({ isOpen, onClose }) {
   const [imageUrl, setImageUrl] = useState('');
   const [attachmentName, setAttachmentName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
 
   const handleSubmit = async (e) => {
@@ -48,14 +51,18 @@ export function PostUpdateModal({ isOpen, onClose }) {
     }
   };
 
-  const handleImageFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result);
-      };
-      reader.readAsDataURL(file);
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError('');
+    setUploading(true);
+    try {
+      const result = await uploadInstitutionalImage(file, 'community-updates');
+      setPreviewImage(result.url);
+    } catch (err) {
+      setUploadError(err.message || 'Failed to upload image.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -103,16 +110,21 @@ export function PostUpdateModal({ isOpen, onClose }) {
           <div className="flex items-center gap-2">
             <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-300 transition-colors">
               <ImageIcon className="w-4 h-4 text-slate-600" />
-              <span>Choose Image File</span>
+              <span>{uploading ? 'Optimizing & Uploading...' : 'Choose Image File'}</span>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                disabled={uploading}
                 onChange={handleImageFileChange}
                 className="hidden"
               />
             </label>
             <span className="text-xs text-slate-400">or enter image URL:</span>
           </div>
+
+          {uploadError && (
+            <p className="text-[11px] font-semibold text-rose-600 mt-1.5">{uploadError}</p>
+          )}
 
           <input
             type="url"

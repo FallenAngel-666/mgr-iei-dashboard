@@ -48,9 +48,22 @@ function getLocalData(key, fallback) {
 function setLocalData(key, data) {
   try {
     if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+    const serialized = JSON.stringify(data);
+    // Bound secondary browser cache to 1.5 MB per collection so 1,500+ members never hit localStorage quota;
+    // Cloud Firestore is always the primary authoritative production database.
+    if (serialized.length > 1500000) {
+      localStorage.removeItem(STORAGE_PREFIX + key);
+      return;
+    }
+    localStorage.setItem(STORAGE_PREFIX + key, serialized);
   } catch (e) {
-    console.warn('LocalStorage save failed:', e);
+    // Gracefully release secondary cache on QuotaExceededError without disrupting Firestore sync
+    try {
+      localStorage.removeItem(STORAGE_PREFIX + key);
+    } catch (_) {
+      // ignore
+    }
+    console.warn('Secondary browser cache skipped (Firestore remains authoritative):', e.message);
   }
 }
 
