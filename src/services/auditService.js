@@ -5,6 +5,12 @@ import {
   setDoc,
   onSnapshot
 } from '../config/firebase.js';
+import {
+  isHostingerBackend,
+  getAuthToken,
+  hostingerAppendAudit,
+  hostingerFetchAuditLogs
+} from './hostingerApi.js';
 
 export const AUDIT_MODULES = {
   AUTH: 'AUTH',
@@ -147,28 +153,51 @@ function notifySubscribers() {
   });
 }
 
-// Background Cloud Sync with Firestore
-if (typeof window !== 'undefined') {
+// Background Cloud Sync (Hostinger MySQL Audit API or Cloud Firestore)
+async function refreshHostingerAuditLogs() {
+  if (!isHostingerBackend() || !getAuthToken()) return;
   try {
-    const auditCol = collection(db, 'system_audit_logs');
-    onSnapshot(auditCol, (snapshot) => {
-      if (snapshot && snapshot.docs && snapshot.docs.length > 0) {
-        const cloudLogs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-        // Merge cloud logs with local logs preserving uniqueness and sorting by timestamp descending
-        const map = new Map();
-        [...cloudLogs, ...activeLogs].forEach((item) => {
-          if (item && item.id) map.set(item.id, item);
-        });
-        activeLogs = Array.from(map.values()).sort(
-          (a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)
-        );
-        notifySubscribers();
-      }
-    }, (err) => {
-      console.warn('Firestore audit sync info (offline/cache):', err.message);
-    });
+    const res = await hostingerFetchAuditLogs(500);
+    if (res && Array.isArray(res.logs)) {
+      activeLogs = res.logs;
+      notifySubscribers();
+    }
   } catch (err) {
-    console.warn('Firestore audit init:', err);
+    // 403 expected for non-console users (strictly restricted to CBN Joint Secretary & Master Admin)
+    if (err.status !== 401 && err.status !== 403) {
+      console.warn('Hostinger audit fetch notice:', err.message);
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  if (isHostingerBackend()) {
+    window.setInterval(() => {
+      if (subscribers.size > 0 && getAuthToken() && document.visibilityState !== 'hidden') {
+        refreshHostingerAuditLogs();
+      }
+    }, 6000);
+  } else {
+    try {
+      const auditCol = collection(db, 'system_audit_logs');
+      onSnapshot(auditCol, (snapshot) => {
+        if (snapshot && snapshot.docs && snapshot.docs.length > 0) {
+          const cloudLogs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          const map = new Map();
+          [...cloudLogs, ...activeLogs].forEach((item) => {
+            if (item && item.id) map.set(item.id, item);
+          });
+          activeLogs = Array.from(map.values()).sort(
+            (a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)
+          );
+          notifySubscribers();
+        }
+      }, (err) => {
+        console.warn('Firestore audit sync info (offline/cache):', err.message);
+      });
+    } catch (err) {
+      console.warn('Firestore audit init:', err);
+    }
   }
 }
 
@@ -212,13 +241,17 @@ export async function recordActivity({
   activeLogs.unshift(auditEntry);
   notifySubscribers();
 
-  // Async push to Firestore /system_audit_logs
+  // Async push to central immutable audit trail (Hostinger MySQL or Firestore)
   try {
-    const docRef = doc(db, 'system_audit_logs', id);
-    await setDoc(docRef, auditEntry);
+    if (isHostingerBackend()) {
+      await hostingerAppendAudit(auditEntry);
+    } else {
+      const docRef = doc(db, 'system_audit_logs', id);
+      await setDoc(docRef, auditEntry);
+    }
   } catch (err) {
     // Durable offline queue: log already saved in localStorage activeLogs
-    console.warn('Firestore audit push (cached durable outbox):', err.message);
+    console.warn('Central audit push (cached durable outbox):', err.message);
   }
 
   return auditEntry;
@@ -230,6 +263,9 @@ export async function recordActivity({
 export function subscribeToAuditLogs(callback) {
   subscribers.add(callback);
   callback([...activeLogs]);
+  if (isHostingerBackend()) {
+    refreshHostingerAuditLogs();
+  }
   return () => subscribers.delete(callback);
 }
 

@@ -8,6 +8,13 @@ import {
   onSnapshot
 } from '../config/firebase.js';
 import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from './auditService.js';
+import {
+  isHostingerBackend,
+  hostingerFetchPublic,
+  hostingerSavePublicProfile,
+  hostingerSavePublicEvent,
+  hostingerDeletePublicEvent
+} from './hostingerApi.js';
 
 // Default institutional public profile configuration
 export const DEFAULT_PUBLIC_PROFILE = {
@@ -186,8 +193,33 @@ function notifyEvents() {
   });
 }
 
-// Background Cloud Sync with Firestore
-if (db) {
+// Background Cloud Sync (Hostinger MySQL API or Cloud Firestore)
+async function refreshHostingerPublicData() {
+  try {
+    const res = await hostingerFetchPublic();
+    if (res && res.profile) {
+      publicProfileStore = { ...DEFAULT_PUBLIC_PROFILE, ...res.profile };
+      notifyProfile();
+    }
+    if (res && Array.isArray(res.events)) {
+      publicEventsStore = res.events;
+      notifyEvents();
+    }
+  } catch (err) {
+    console.warn('Hostinger public profile fetch info:', err.message);
+  }
+}
+
+if (isHostingerBackend()) {
+  if (typeof window !== 'undefined') {
+    refreshHostingerPublicData();
+    window.setInterval(() => {
+      if (document.visibilityState !== 'hidden') {
+        refreshHostingerPublicData();
+      }
+    }, 15000);
+  }
+} else if (db) {
   try {
     // 1. Sync public profile config doc
     const profileDocRef = doc(db, 'iei_public_profile', 'main_config');
@@ -279,8 +311,10 @@ export async function savePublicProfileConfig(updates, author = null) {
     newValues: updates
   });
 
-  // Sync to Firestore central database
-  if (db) {
+  // Sync to central database (Hostinger MySQL or Firestore)
+  if (isHostingerBackend()) {
+    await hostingerSavePublicProfile(publicProfileStore);
+  } else if (db) {
     try {
       const profileDocRef = doc(db, 'iei_public_profile', 'main_config');
       await setDoc(profileDocRef, publicProfileStore, { merge: true });
@@ -324,7 +358,9 @@ export async function savePublicUpcomingEvent(eventData, author = null) {
     newValues: { title: newEvent.title, date: newEvent.date, venue: newEvent.venue }
   });
 
-  if (db) {
+  if (isHostingerBackend()) {
+    await hostingerSavePublicEvent(newEvent);
+  } else if (db) {
     try {
       const eventDocRef = doc(db, 'iei_public_events', newEvent.id);
       await setDoc(eventDocRef, newEvent);
@@ -350,7 +386,9 @@ export async function deletePublicUpcomingEvent(eventId) {
     targetId: eventId
   });
 
-  if (db) {
+  if (isHostingerBackend()) {
+    await hostingerDeletePublicEvent(eventId);
+  } else if (db) {
     try {
       const eventDocRef = doc(db, 'iei_public_events', eventId);
       await deleteDoc(eventDocRef);

@@ -28,6 +28,10 @@ ServerSignature Off
   # RewriteRule ^ https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
   # 4. Single-Page Application (React + Vite) Routing Fallback
+  # Never rewrite PHP API endpoints or Hostinger uploaded files to index.html
+  RewriteRule ^api(/|$) - [L,NC]
+  RewriteRule ^uploads(/|$) - [L,NC]
+
   # Serve existing files and directories directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d

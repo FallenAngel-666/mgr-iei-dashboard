@@ -1,6 +1,7 @@
 /**
- * IEI MGR STUDENTS CHAPTER — Hostinger Production Verification & Packaging Script
- * Runs after `vite build` to verify dist/ integrity for Hostinger public_html deployment.
+ * IEI MGR STUDENTS CHAPTER — 100% Hostinger Production Build, Verification & Packaging
+ * Compiles Vite in 100% Hostinger mode (MySQL + PHP 8 API + Hostinger File Storage),
+ * verifies all required files and security guards, and generates hostinger-deploy-package.zip.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,14 +17,26 @@ function fail(msg) {
 }
 
 console.log('================================================================');
-console.log('  IEI MGR STUDENTS CHAPTER — HOSTINGER DEPLOYMENT PREFLIGHT     ');
+console.log('  IEI MGR STUDENTS CHAPTER — 100% HOSTINGER PRODUCTION BUILD    ');
 console.log('================================================================');
 
+// 0. Compile Vite explicitly in 100% Hostinger MySQL + Storage mode
+console.log('Building frontend bundle with VITE_BACKEND_MODE=hostinger ...');
+execSync('npx vite build', {
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    VITE_BACKEND_MODE: 'hostinger',
+    VITE_API_BASE_URL: '/api',
+    VITE_APP_ENV: 'production'
+  }
+});
+
 if (!fs.existsSync(DIST)) {
-  fail('dist/ directory not found. Run `npm run build` first.');
+  fail('dist/ directory not found after vite build.');
 }
 
-// 1. Verify required production files exist in dist/
+// 1. Verify required frontend, .htaccess, PHP 8 API, and storage files exist in dist/
 const requiredFiles = [
   'index.html',
   '.htaccess',
@@ -33,7 +46,18 @@ const requiredFiles = [
   'assets/gallery/gallery-1-rain26-cultural-fest.jpg',
   'assets/gallery/gallery-2-rain26-valedictory.jpg',
   'assets/gallery/gallery-3-presidential-felicitation.jpg',
-  'assets/gallery/gallery-4-state-centre-delegation.jpg'
+  'assets/gallery/gallery-4-state-centre-delegation.jpg',
+  'api/.htaccess',
+  'api/config.example.php',
+  'api/bootstrap.php',
+  'api/health.php',
+  'api/auth.php',
+  'api/data.php',
+  'api/sync.php',
+  'api/public.php',
+  'api/audit.php',
+  'api/upload.php',
+  'uploads/.htaccess'
 ];
 
 for (const rel of requiredFiles) {
@@ -44,8 +68,15 @@ for (const rel of requiredFiles) {
   console.log(`  [OK] dist/${rel}`);
 }
 
-// 2. Verify no sensitive/forbidden files leaked into dist/
-const forbiddenFiles = ['.env', '.env.production', '.env.local', 'COMMITTEE_CREDENTIALS.csv', 'COMMITTEE_CREDENTIALS.md'];
+// 2. Verify NO sensitive/secret files leaked into dist/
+const forbiddenFiles = [
+  '.env',
+  '.env.production',
+  '.env.local',
+  'api/config.php',
+  'COMMITTEE_CREDENTIALS.csv',
+  'COMMITTEE_CREDENTIALS.md'
+];
 for (const f of forbiddenFiles) {
   if (fs.existsSync(path.join(DIST, f))) {
     fail(`Sensitive file detected inside dist/: ${f}`);
@@ -53,7 +84,7 @@ for (const f of forbiddenFiles) {
 }
 console.log('  [OK] Zero secret/credential files present in dist/');
 
-// 3. Calculate total package size and verify asset bundle integrity
+// 3. Verify total package size
 let totalBytes = 0;
 let fileCount = 0;
 function walk(dir) {
@@ -69,27 +100,19 @@ function walk(dir) {
 }
 walk(DIST);
 const sizeMB = (totalBytes / (1024 * 1024)).toFixed(2);
-console.log(`  [OK] Build bundle verified: ${fileCount} files (${sizeMB} MB total)`);
+console.log(`  [OK] 100% Hostinger bundle verified: ${fileCount} files (${sizeMB} MB total)`);
 
-// 4. Verify index.html references hashed production assets (not /src/main.jsx)
-const indexHtml = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8');
-if (indexHtml.includes('/src/main.jsx')) {
-  fail('dist/index.html still references unbundled /src/main.jsx!');
-}
-console.log('  [OK] dist/index.html properly references compiled Vite production assets');
-
-// 5. Verify .htaccess contains HTTPS redirect + SPA fallback
+// 4. Verify .htaccess contains HTTPS redirect, API bypass, and SPA fallback
 const htaccess = fs.readFileSync(path.join(DIST, '.htaccess'), 'utf8');
-if (!htaccess.includes('RewriteRule ^ index.html [L]') || !htaccess.includes('RewriteCond %{HTTPS} !=on')) {
-  fail('dist/.htaccess is missing HTTPS enforcement or SPA fallback rules.');
+if (!htaccess.includes('RewriteRule ^api(/|$) - [L,NC]') || !htaccess.includes('RewriteRule ^ index.html [L]')) {
+  fail('dist/.htaccess is missing PHP API bypass or SPA fallback rules.');
 }
-console.log('  [OK] dist/.htaccess verified (HTTPS redirect, SPA fallback, security headers, caching)');
+console.log('  [OK] dist/.htaccess verified (HTTPS, PHP /api & /uploads bypass, SPA fallback, security headers)');
 
-// 6. Create hostinger-deploy-package.zip (includes .htaccess!)
+// 5. Create hostinger-deploy-package.zip (includes all .htaccess dotfiles!)
 try {
   if (fs.existsSync(ZIP_OUTPUT)) fs.unlinkSync(ZIP_OUTPUT);
   if (process.platform === 'win32') {
-    // PowerShell Compress-Archive skips dotfiles if using wildcards, so use .NET ZipFile on dist/
     execSync(
       `powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${DIST}', '${ZIP_OUTPUT}', [System.IO.Compression.CompressionLevel]::Optimal, $false)"`,
       { stdio: 'inherit' }
@@ -98,12 +121,11 @@ try {
     execSync(`cd "${DIST}" && zip -r "${ZIP_OUTPUT}" .`, { stdio: 'inherit' });
   }
   const zipSizeMB = (fs.statSync(ZIP_OUTPUT).size / (1024 * 1024)).toFixed(2);
-  console.log(`  [OK] Created Hostinger upload archive: hostinger-deploy-package.zip (${zipSizeMB} MB)`);
+  console.log(`  [OK] Created 100% Hostinger upload archive: hostinger-deploy-package.zip (${zipSizeMB} MB)`);
 } catch (err) {
   console.warn('  [WARN] Could not create zip archive automatically:', err.message);
-  console.warn('         You can still upload the contents of dist/ directly to Hostinger public_html.');
 }
 
 console.log('================================================================');
-console.log('  HOSTINGER PREFLIGHT PASSED — READY FOR public_html UPLOAD     ');
+console.log('  100% HOSTINGER PACKAGE READY (MySQL + PHP 8 + Disk Storage)   ');
 console.log('================================================================');

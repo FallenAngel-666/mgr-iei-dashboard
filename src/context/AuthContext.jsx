@@ -6,8 +6,16 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged 
 } from '../config/firebase';
-import { getMembers, subscribeToData, updateUserProfile } from '../services/firebaseService';
+import { getMembers, subscribeToData, updateUserProfile, triggerHostingerSync } from '../services/firebaseService';
 import { recordActivity, AUDIT_MODULES, AUDIT_ACTIONS } from '../services/auditService';
+import {
+  isHostingerBackend,
+  getAuthToken,
+  clearAuthToken,
+  hostingerLogin,
+  hostingerVerifySession,
+  hostingerLogout
+} from '../services/hostingerApi';
 
 const AuthContext = createContext(null);
 
@@ -71,6 +79,27 @@ export function AuthProvider({ children }) {
     return updated;
   }
 
+  // In 100% Hostinger mode, verify active Bearer token against MySQL on initial load
+  useEffect(() => {
+    if (!isHostingerBackend()) return;
+    const token = getAuthToken();
+    if (!token) {
+      if (currentUser) setCurrentUser(null);
+      return;
+    }
+    hostingerVerifySession()
+      .then((res) => {
+        if (res && res.user) {
+          setCurrentUser(res.user);
+          triggerHostingerSync(true).catch(() => {});
+        }
+      })
+      .catch(() => {
+        clearAuthToken();
+        setCurrentUser(null);
+      });
+  }, []);
+
   // Login handler: accepts either official Username (e.g. sriman.chair-01) OR registered Email
   async function login(usernameOrEmail, password) {
     setLoading(true);
@@ -81,6 +110,15 @@ export function AuthProvider({ children }) {
 
       if (!cleanIdentifier || !cleanPassword) {
         throw new Error('Please enter both your username/email and password.');
+      }
+
+      // 100% Hostinger MySQL Authentication Mode
+      if (isHostingerBackend()) {
+        const res = await hostingerLogin(cleanIdentifier, cleanPassword);
+        setCurrentUser(res.user);
+        setLoading(false);
+        await triggerHostingerSync(true);
+        return { success: true, user: res.user };
       }
 
       const allMembers = await getMembers();
@@ -165,6 +203,15 @@ export function AuthProvider({ children }) {
 
   // Logout handler
   async function logout() {
+    if (isHostingerBackend()) {
+      await hostingerLogout();
+      setCurrentUser(null);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('iei_mgr_active_user');
+      }
+      return;
+    }
+
     if (currentUser) {
       recordActivity({
         actor: currentUser,

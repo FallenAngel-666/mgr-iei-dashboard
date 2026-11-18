@@ -30,6 +30,13 @@ import { generateUsername, generateStrongPassword } from './credentialService.js
 import { getISOWeekDetails } from '../utils/dateUtils.js';
 import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from './auditService.js';
 import { getPublicProfileConfig, savePublicProfileConfig } from './publicProfileService.js';
+import {
+  isHostingerBackend,
+  getAuthToken,
+  hostingerUpsertDoc,
+  hostingerDeleteDoc,
+  hostingerDeltaSync
+} from './hostingerApi.js';
 
 // Local storage backup keys for offline resilience & immediate responsiveness
 // v9 prefix ensures all sample test entries are purged cleanly across all clients
@@ -112,8 +119,97 @@ function notify(channel, data) {
   }
 }
 
-// Background Firestore synchronization helper (resilient dual-write)
+const COL_TO_HOSTINGER = {
+  iei_members: 'members',
+  iei_tasks: 'tasks',
+  iei_updates: 'updates',
+  iei_events: 'events',
+  iei_attendance: 'attendance',
+  iei_announcements: 'announcements',
+  iei_certificates: 'certificates',
+  iei_achievements: 'achievements',
+  iei_notifications: 'notifications'
+};
+
+let hostingerSyncVersions = {};
+let hostingerPollTimer = null;
+
+function applyCollectionSnapshot(channel, items) {
+  const sorted = channel === 'members'
+    ? items
+    : [...items].sort((a, b) => {
+        const timeA = new Date(a.createdAt || a.timestamp || a.date || a.publishedAt || 0).getTime();
+        const timeB = new Date(b.createdAt || b.timestamp || b.date || b.publishedAt || 0).getTime();
+        return timeB - timeA;
+      });
+
+  switch (channel) {
+    case 'members': membersStore = sorted; break;
+    case 'tasks': tasksStore = sorted; break;
+    case 'updates': updatesStore = sorted; break;
+    case 'events': eventsStore = sorted; break;
+    case 'attendance': attendanceStore = sorted; break;
+    case 'announcements': announcementsStore = sorted; break;
+    case 'certificates': certificatesStore = sorted; break;
+    case 'achievements': achievementsStore = sorted; break;
+    case 'notifications': notificationsStore = sorted; break;
+    default: return;
+  }
+
+  setLocalData(channel, sorted);
+  if (subscribers[channel]) {
+    subscribers[channel].forEach((cb) => {
+      try { cb(sorted); } catch (e) { console.error(e); }
+    });
+  }
+}
+
+export async function triggerHostingerSync(forceFull = false) {
+  if (!isHostingerBackend() || !getAuthToken()) return;
+  try {
+    const res = await hostingerDeltaSync(forceFull ? {} : hostingerSyncVersions);
+    if (res && res.versions) {
+      hostingerSyncVersions = res.versions;
+    }
+    if (res && res.changed) {
+      Object.entries(res.changed).forEach(([channel, items]) => {
+        if (Array.isArray(items)) {
+          applyCollectionSnapshot(channel, items);
+        }
+      });
+    }
+  } catch (err) {
+    if (err.status !== 401) {
+      console.warn('Hostinger delta sync notice:', err.message);
+    }
+  }
+}
+
+export function startHostingerSyncLoop() {
+  if (!isHostingerBackend() || typeof window === 'undefined') return;
+  if (hostingerPollTimer) return;
+  triggerHostingerSync(true).catch(() => {});
+  hostingerPollTimer = window.setInterval(() => {
+    if (getAuthToken() && document.visibilityState !== 'hidden') {
+      triggerHostingerSync(false).catch(() => {});
+    }
+  }, 4000);
+}
+
+// Central database write helper (routes to Hostinger MySQL API or Cloud Firestore)
 export async function syncToFirestore(colName, docId, data, isMerge = false) {
+  if (isHostingerBackend()) {
+    const channel = COL_TO_HOSTINGER[colName];
+    if (channel && docId) {
+      const res = await hostingerUpsertDoc(channel, docId, data, isMerge);
+      if (res && res.version) {
+        hostingerSyncVersions[channel] = res.version;
+      }
+      return data;
+    }
+    return data;
+  }
+
   if (db && docId) {
     try {
       const docRef = doc(db, colName, String(docId));
@@ -132,6 +228,17 @@ export async function syncToFirestore(colName, docId, data, isMerge = false) {
 }
 
 export async function syncDeleteFromFirestore(colName, docId) {
+  if (isHostingerBackend()) {
+    const channel = COL_TO_HOSTINGER[colName];
+    if (channel && docId) {
+      const res = await hostingerDeleteDoc(channel, docId);
+      if (res && res.version) {
+        hostingerSyncVersions[channel] = res.version;
+      }
+    }
+    return true;
+  }
+
   if (db && docId) {
     try {
       const docRef = doc(db, colName, String(docId));
@@ -166,8 +273,10 @@ export function subscribeToData(channel, callback) {
   return () => subscribers[channel].delete(callback);
 }
 
-// Initialize background cloud listeners for complete real-time synchronization
-if (db) {
+// Initialize background cloud listeners (100% Hostinger MySQL Delta Sync OR Cloud Firestore)
+if (isHostingerBackend()) {
+  startHostingerSyncLoop();
+} else if (db) {
   try {
     const collectionsToSync = [
       { name: 'iei_members', channel: 'members', getStore: () => membersStore, setStore: (s) => { membersStore = s; } },
@@ -837,9 +946,9 @@ export async function clearAllUserNotifications(userId, userRole) {
   }
 }
 
-// Ensure initial institutional committee records are seeded to Cloud Firestore
+// Ensure initial institutional committee records are seeded to Cloud Firestore (Firebase mode only)
 export async function ensureCloudSeeded() {
-  if (!db) return;
+  if (isHostingerBackend() || !db) return;
   try {
     const memSnap = await getDocs(collection(db, 'iei_members'));
     if (memSnap.empty) {
@@ -853,5 +962,7 @@ export async function ensureCloudSeeded() {
   }
 }
 
-// Automatically invoke cloud seeding check
-ensureCloudSeeded().catch(() => {});
+// Automatically invoke cloud seeding check (Firebase mode only)
+if (!isHostingerBackend()) {
+  ensureCloudSeeded().catch(() => {});
+}

@@ -23,10 +23,12 @@ release/
 *.key
 serviceAccountKey.json
 firebase-adminsdk*.json
+public/api/config.php
 
 # Backups & Hostinger deployment archives
 backups/
 hostinger-deploy-package.zip
+database/seed-from-firestore.sql
 
 # Firebase CLI cache & logs
 .firebase/

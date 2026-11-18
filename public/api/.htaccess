@@ -1,0 +1,27 @@
+# ==============================================================================
+# IEI MGR STUDENTS CHAPTER — PROTECTED API DIRECTORY RULES (HOSTINGER LITESPEED)
+# ==============================================================================
+Options -Indexes
+
+# Forward Authorization header cleanly to PHP on Hostinger LiteSpeed/FastCGI
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Authorization} ^(.*)
+  RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+</IfModule>
+
+# Strictly deny direct HTTP access to server configuration & internal helpers
+<FilesMatch "^(config\.php|config\.example\.php|bootstrap\.php)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store, no-cache, must-revalidate"
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>

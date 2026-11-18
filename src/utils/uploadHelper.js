@@ -1,4 +1,5 @@
 import { storage, ref, uploadBytes, getDownloadURL } from '../config/firebase.js';
+import { isHostingerBackend, hostingerUploadFile } from '../services/hostingerApi.js';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 const ALLOWED_DOC_TYPES = [
@@ -82,8 +83,9 @@ export function compressImageFile(file, { maxDimension = 1400, quality = 0.82 } 
 }
 
 /**
- * Securely optimize and upload an image to Firebase Storage under iei_uploads/<folder>/.
- * Falls back cleanly to a compressed Data URL (<450 KB) if Firebase Storage is unreachable.
+ * Securely optimize and upload an image.
+ * - In 100% Hostinger mode: uploads directly to Hostinger /api/upload.php (Hostinger disk + MySQL iei_uploads table).
+ * - In Firebase mode: uploads to Firebase Storage with safe compressed inline fallback.
  */
 export async function uploadInstitutionalImage(file, folder = 'general') {
   const check = validateUploadFile(file, { imagesOnly: true });
@@ -92,11 +94,22 @@ export async function uploadInstitutionalImage(file, folder = 'general') {
   }
 
   const { blob, dataUrl, contentType } = await compressImageFile(file);
+  const safeName = (file.name || 'image.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
 
-  // Attempt Firebase Storage upload first (preferred for production scalability)
+  // 100% Hostinger Storage Mode (Hostinger NVMe disk + Hostinger MySQL metadata)
+  if (isHostingerBackend()) {
+    const res = await hostingerUploadFile(blob, safeName, folder);
+    return {
+      url: res.url,
+      storagePath: res.storagePath,
+      uploadId: res.id,
+      mode: 'hostinger-storage'
+    };
+  }
+
+  // Firebase mode fallback
   if (storage) {
     try {
-      const safeName = (file.name || 'image.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `iei_uploads/${folder}/${Date.now()}_${safeName}`;
       const storageRef = ref(storage, path);
       await uploadBytes(storageRef, blob, { contentType });
@@ -107,7 +120,7 @@ export async function uploadInstitutionalImage(file, folder = 'general') {
     }
   }
 
-  // Ensure fallback compressed Data URL is safe for Firestore (< 750 KB)
+  // Ensure fallback compressed Data URL is safe (< 750 KB)
   if (dataUrl.length > 750000) {
     const smaller = await compressImageFile(file, { maxDimension: 900, quality: 0.7 });
     return { url: smaller.dataUrl, storagePath: null, mode: 'compressed-inline' };

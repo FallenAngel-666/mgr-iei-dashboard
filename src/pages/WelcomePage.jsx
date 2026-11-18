@@ -15,7 +15,10 @@ import {
   BookOpen,
   Award,
   Users,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ArrowLeft,
+  Home,
+  CheckCircle2
 } from 'lucide-react';
 
 import { CurtainAnimation } from '../components/welcome/CurtainAnimation';
@@ -26,13 +29,43 @@ import {
   DEFAULT_PUBLIC_PROFILE 
 } from '../services/publicProfileService';
 
+const VALID_PAGES = [
+  'home',
+  'about-iei',
+  'student-chapter',
+  'gallery',
+  'upcoming-events',
+  'membership',
+  'contact-details'
+];
+
+const NAV_ITEMS = [
+  { id: 'home', label: 'Home' },
+  { id: 'about-iei', label: 'About IEI' },
+  { id: 'student-chapter', label: 'Student Chapter' },
+  { id: 'gallery', label: 'Gallery' },
+  { id: 'upcoming-events', label: 'Upcoming Events' },
+  { id: 'membership', label: 'IEI Membership' },
+  { id: 'contact-details', label: 'Contact Details' }
+];
+
+function resolvePageFromHash() {
+  if (typeof window === 'undefined') return 'home';
+  const raw = window.location.hash.replace(/^#/, '').toLowerCase();
+  if (raw === 'about-chapter') return 'student-chapter';
+  if (raw === 'events') return 'upcoming-events';
+  if (raw === 'contacts') return 'contact-details';
+  return VALID_PAGES.includes(raw) ? raw : 'home';
+}
+
 export function WelcomePage({ onNavigateToLogin }) {
   const [profile, setProfile] = useState(DEFAULT_PUBLIC_PROFILE);
   const [publicEvents, setPublicEvents] = useState([]);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [showCurtain, setShowCurtain] = useState(true);
+  const [activePage, setActivePage] = useState(resolvePageFromHash);
 
-  // Subscribe to live public profile updates from Firestore / Local Cache
+  // Subscribe to live public profile updates (Hostinger MySQL or Cloud Firestore)
   useEffect(() => {
     const unsubProfile = subscribeToPublicProfile((data) => {
       if (data) setProfile(data);
@@ -46,11 +79,28 @@ export function WelcomePage({ onNavigateToLogin }) {
     };
   }, []);
 
-  const scrollToSection = (id) => {
+  // Keep active page in sync with browser Back / Forward navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#login') return;
+      setActivePage(resolvePageFromHash());
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateToPage = (pageId) => {
     setIsSideMenuOpen(false);
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+    const target = VALID_PAGES.includes(pageId) ? pageId : 'home';
+    setActivePage(target);
+    if (typeof window !== 'undefined') {
+      if (target === 'home') {
+        window.history.pushState('', document.title, window.location.pathname + window.location.search);
+      } else {
+        window.location.hash = `#${target}`;
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -100,88 +150,76 @@ export function WelcomePage({ onNavigateToLogin }) {
         </div>
 
         {/* Main Branding Bar with Top-Right "COMMITTEE LOGIN" button */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => navigateToPage('home')}
+            className="flex items-center gap-2.5 shrink-0 cursor-pointer text-left"
+            title="Return to IEI MGR Home"
+          >
             {/* University Logo Banner */}
             <img
               src="/assets/website-logo.png"
               alt="Dr. M.G.R. Educational and Research Institute"
-              className="h-10 sm:h-12 w-auto object-contain"
+              className="h-9 sm:h-11 w-auto object-contain"
             />
             <div className="h-8 w-px bg-slate-200 hidden sm:block" />
             {/* Official IEI Emblem & IEI DASHBOARD SYSTEM Title */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <img
                 src={profile.aboutIeiLogo || '/assets/apk-logo.png'}
                 alt="IEI Royal Charter Emblem"
-                className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-full shadow-xs border border-slate-200 p-0.5 bg-white"
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-full shadow-xs border border-slate-200 p-0.5 bg-white shrink-0"
               />
               <div className="text-left">
-                <span className="text-[12px] sm:text-sm font-black text-iei-navy-950 uppercase tracking-wide block leading-tight font-serif">
+                <span className="text-[11px] sm:text-xs font-black text-iei-navy-950 uppercase tracking-wide block leading-tight font-serif whitespace-nowrap">
                   IEI DASHBOARD SYSTEM
                 </span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-amber-600 block">
+                <span className="text-[9px] sm:text-[10px] font-bold text-amber-600 block whitespace-nowrap">
                   The Institution of Engineers (India)
                 </span>
               </div>
             </div>
-          </div>
+          </button>
 
-          {/* Navigation Links and PROMINENT TOP-RIGHT "COMMITTEE LOGIN" BUTTON */}
-          <div className="flex items-center gap-3 sm:gap-6">
-            <nav className="hidden lg:flex items-center gap-5 text-xs font-bold text-slate-700">
-              <button 
-                onClick={() => scrollToSection('about-iei')}
-                className="hover:text-iei-navy-900 transition-colors cursor-pointer"
-              >
-                About IEI
-              </button>
-              <button 
-                onClick={() => scrollToSection('about-chapter')}
-                className="hover:text-iei-navy-900 transition-colors cursor-pointer"
-              >
-                Student Chapter
-              </button>
-              <button 
-                onClick={() => scrollToSection('gallery')}
-                className="hover:text-iei-navy-900 transition-colors cursor-pointer"
-              >
-                Gallery
-              </button>
-              <button 
-                onClick={() => scrollToSection('events')}
-                className="hover:text-iei-navy-900 transition-colors cursor-pointer"
-              >
-                Upcoming Events
-              </button>
-              <button 
-                onClick={() => scrollToSection('membership')}
-                className="hover:text-iei-navy-900 transition-colors cursor-pointer"
-              >
-                IEI Membership
-              </button>
-              <button 
-                onClick={() => scrollToSection('contacts')}
-                className="hover:text-iei-navy-900 transition-colors cursor-pointer"
-              >
-                Contact Details
-              </button>
+          {/* Navigation Links (Single-line, separate page per item) & COMMITTEE LOGIN */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <nav className="hidden xl:flex items-center gap-1 text-xs font-bold text-slate-700">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activePage === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigateToPage(item.id)}
+                    className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-iei-navy-950 text-amber-400 shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-iei-navy-950'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </nav>
 
-            {/* D. COMMITTEE LOGIN – TOP-RIGHT CORNER BUTTON */}
+            {/* COMMITTEE LOGIN – TOP-RIGHT CORNER BUTTON */}
             <button
+              type="button"
               onClick={onNavigateToLogin}
-              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-iei-navy-950 to-slate-900 hover:from-slate-900 hover:to-iei-navy-950 text-white rounded-xl text-xs sm:text-xs font-black uppercase tracking-wider shadow-md hover:shadow-lg transition-all hover:scale-103 cursor-pointer border border-amber-400/40 ring-2 ring-amber-400/20"
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-iei-navy-950 to-slate-900 hover:from-slate-900 hover:to-iei-navy-950 text-white rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-md hover:shadow-lg transition-all hover:scale-103 cursor-pointer border border-amber-400/40 ring-2 ring-amber-400/20 whitespace-nowrap shrink-0"
               title="Open Member Portal Sign In"
             >
               <LogIn className="w-4 h-4 text-amber-400" />
               <span>COMMITTEE LOGIN</span>
             </button>
 
-            {/* Mobile Navigation Drawer Toggle */}
+            {/* Mobile / Tablet Navigation Drawer Toggle */}
             <button
+              type="button"
               onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
-              className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 lg:hidden cursor-pointer"
+              className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 xl:hidden cursor-pointer"
               aria-label="Toggle Navigation Menu"
             >
               {isSideMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -190,9 +228,9 @@ export function WelcomePage({ onNavigateToLogin }) {
         </div>
       </header>
 
-      {/* MOBILE SLIDE-OUT NAVIGATION DRAWER */}
+      {/* MOBILE / TABLET SLIDE-OUT NAVIGATION DRAWER */}
       {isSideMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
+        <div className="fixed inset-0 z-50 xl:hidden flex">
           <div 
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity"
             onClick={() => setIsSideMenuOpen(false)}
@@ -203,6 +241,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                 MGR IEI Navigation
               </span>
               <button 
+                type="button"
                 onClick={() => setIsSideMenuOpen(false)}
                 className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
               >
@@ -210,53 +249,30 @@ export function WelcomePage({ onNavigateToLogin }) {
               </button>
             </div>
 
-            <nav className="flex flex-col gap-2.5 text-sm font-bold text-slate-800">
-              <button
-                onClick={() => scrollToSection('about-iei')}
-                className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
-              >
-                <span>1. About IEI</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
-              <button
-                onClick={() => scrollToSection('about-chapter')}
-                className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
-              >
-                <span>2. About Chapter (3-Lines)</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
-              <button
-                onClick={() => scrollToSection('gallery')}
-                className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
-              >
-                <span>3. Chapter Photo Gallery</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
-              <button
-                onClick={() => scrollToSection('events')}
-                className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
-              >
-                <span>4. Upcoming Events</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
-              <button
-                onClick={() => scrollToSection('membership')}
-                className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
-              >
-                <span>5. IEI Membership</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
-              <button
-                onClick={() => scrollToSection('contacts')}
-                className="flex items-center justify-between py-2 border-b border-slate-50 text-left hover:text-iei-navy-900 cursor-pointer"
-              >
-                <span>6. Contact Details</span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
+            <nav className="flex flex-col gap-1.5 text-sm font-bold text-slate-800">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activePage === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigateToPage(item.id)}
+                    className={`flex items-center justify-between py-2.5 px-3 rounded-xl text-left transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-iei-navy-950 text-amber-400'
+                        : 'hover:bg-slate-100 text-slate-800'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    <ChevronRight className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
+                  </button>
+                );
+              })}
             </nav>
 
             <div className="mt-auto pt-6 border-t border-slate-100">
               <button
+                type="button"
                 onClick={() => {
                   setIsSideMenuOpen(false);
                   onNavigateToLogin();
@@ -274,7 +290,44 @@ export function WelcomePage({ onNavigateToLogin }) {
         </div>
       )}
 
-      {/* HERO BANNER */}
+      <main className="flex-1 flex flex-col">
+      {/* DEDICATED PAGE HEADER BANNER (Shown when viewing an individual section page) */}
+      {activePage !== 'home' && (
+        <section className="bg-gradient-to-r from-iei-navy-950 via-slate-900 to-iei-navy-950 text-white py-8 sm:py-10 px-4 sm:px-6 border-b border-amber-400/20">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-1.5">
+                <button
+                  type="button"
+                  onClick={() => navigateToPage('home')}
+                  className="inline-flex items-center gap-1 hover:text-amber-200 transition-colors cursor-pointer"
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  <span>Home</span>
+                </button>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-slate-200">
+                  {NAV_ITEMS.find((n) => n.id === activePage)?.label}
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black font-serif tracking-tight">
+                {NAV_ITEMS.find((n) => n.id === activePage)?.label}
+              </h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigateToPage('home')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-bold text-white transition-colors self-start sm:self-auto cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
+              <span>Back to Home</span>
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* HERO BANNER (Home Page) */}
+      {activePage === 'home' && (
       <section className="relative overflow-hidden bg-gradient-to-b from-iei-navy-950 via-slate-900 to-iei-navy-950 text-white py-14 sm:py-20 px-4 sm:px-6">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
         <div className="relative max-w-5xl mx-auto text-center">
@@ -306,7 +359,8 @@ export function WelcomePage({ onNavigateToLogin }) {
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
             <button
-              onClick={() => scrollToSection('about-chapter')}
+              type="button"
+              onClick={() => navigateToPage('student-chapter')}
               className="px-6 py-3 bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-white/20 transition-colors cursor-pointer"
             >
               About Chapter
@@ -314,11 +368,13 @@ export function WelcomePage({ onNavigateToLogin }) {
           </div>
         </div>
       </section>
+      )}
 
       {/* ============================================================ */}
       {/* 1. INSTITUTION LOGO AND ABOUT IEI                            */}
       {/* ============================================================ */}
-      <section id="about-iei" className="py-16 sm:py-20 px-4 sm:px-6 bg-white border-b border-slate-200">
+      {(activePage === 'home' || activePage === 'about-iei') && (
+      <section id="about-iei" className="py-16 sm:py-20 px-4 sm:px-6 bg-white border-b border-slate-200 flex-1">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 sm:gap-12 items-center">
             {/* Official Logo with Zero Distortion */}
@@ -368,13 +424,39 @@ export function WelcomePage({ onNavigateToLogin }) {
               </div>
             </div>
           </div>
+
+          {/* Dedicated About IEI Page Highlights */}
+          {activePage === 'about-iei' && (
+            <div className="mt-12 pt-10 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                <h3 className="text-sm font-black text-iei-navy-950 font-serif">15 Engineering Divisions</h3>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  Covers Aerospace, Agricultural, Architectural, Chemical, Civil, Computer, Electrical, Electronics, Environmental, Marine, Mechanical, Metallurgical, Mining, Production, and Textile Engineering.
+                </p>
+              </div>
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                <h3 className="text-sm font-black text-iei-navy-950 font-serif">Global Recognition</h3>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  Represents India in international bodies including WFEO, FEISCA, and the International Professional Engineers Agreement, advancing cross-border engineering mobility.
+                </p>
+              </div>
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                <h3 className="text-sm font-black text-iei-navy-950 font-serif">Research &amp; Publications</h3>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  Publishes peer-reviewed Springer Nature journals (Series A–E), organizes national conventions, and funds student research &amp; innovation projects across India.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </section>
+      )}
 
       {/* ============================================================ */}
       {/* 2. ABOUT MGR IEI STUDENT CHAPTER (EXACTLY THREE LINES)       */}
       {/* ============================================================ */}
-      <section id="about-chapter" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-50 border-b border-slate-200">
+      {(activePage === 'home' || activePage === 'student-chapter') && (
+      <section id="about-chapter" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-50 border-b border-slate-200 flex-1">
         <div className="max-w-5xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-10">
             <div className="inline-flex items-center gap-1.5 text-amber-600 text-xs font-bold uppercase tracking-wider mb-1">
@@ -426,14 +508,36 @@ export function WelcomePage({ onNavigateToLogin }) {
                 <p className="text-xs text-slate-500 mt-0.5">IEI Student Chapter Division</p>
               </div>
             </div>
+
+            {/* Dedicated Student Chapter Page: Patronage Summary */}
+            {activePage === 'student-chapter' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-100">
+                <div className="p-5 rounded-2xl bg-iei-navy-950 text-white">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                    {profile.mentor?.roleLabel || 'Mentor'}
+                  </span>
+                  <p className="text-base font-black mt-1">{profile.mentor?.name || 'Dr. L. Ramesh'}</p>
+                  <p className="text-xs text-slate-300 mt-0.5">{profile.mentor?.designation || 'Past Chairman'}</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-iei-navy-950 text-white">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                    {profile.facultyAdvisor?.roleLabel || 'Faculty Advisor'}
+                  </span>
+                  <p className="text-base font-black mt-1">{profile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}</p>
+                  <p className="text-xs text-slate-300 mt-0.5">{profile.facultyAdvisor?.designation || 'Add. Secretary'}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
+      )}
 
       {/* ============================================================ */}
       {/* 3. CHAPTER PHOTO GALLERY                                     */}
       {/* ============================================================ */}
-      <section id="gallery" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900 text-white">
+      {(activePage === 'home' || activePage === 'gallery') && (
+      <section id="gallery" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900 text-white flex-1">
         <div className="max-w-5xl mx-auto text-center mb-10">
           <div className="inline-flex items-center gap-1.5 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
             <ImageIcon className="w-4 h-4 text-amber-400" />
@@ -449,13 +553,39 @@ export function WelcomePage({ onNavigateToLogin }) {
 
         {/* Chapter Photo Carousel */}
         <PhotoCarousel photos={profile.carouselPhotos} />
+
+        {/* Dedicated Gallery Page: Full High-Resolution Photo Grid */}
+        {activePage === 'gallery' && Array.isArray(profile.carouselPhotos) && profile.carouselPhotos.length > 0 && (
+          <div className="max-w-5xl mx-auto mt-12">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-4 text-center">
+              All Official Chapter Photographs
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {profile.carouselPhotos.map((photo, idx) => (
+                <div
+                  key={photo.id || idx}
+                  className="rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-lg flex items-center justify-center p-2"
+                >
+                  <img
+                    src={photo.url}
+                    alt={`MGR IEI Chapter Photograph ${idx + 1}`}
+                    loading="lazy"
+                    className="w-full h-64 sm:h-72 object-contain rounded-xl"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
+      )}
 
       {/* ============================================================ */}
       {/* 4. UPCOMING EVENTS (Posters, Names, Dates, Descriptions)     */}
       {/* Note: Must appear BEFORE IEI Membership                      */}
       {/* ============================================================ */}
-      <section id="events" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-50 border-b border-slate-200">
+      {(activePage === 'home' || activePage === 'upcoming-events') && (
+      <section id="events" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-50 border-b border-slate-200 flex-1">
         <div className="max-w-5xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="inline-flex items-center gap-1.5 text-amber-600 text-xs font-bold uppercase tracking-wider mb-1">
@@ -551,11 +681,33 @@ export function WelcomePage({ onNavigateToLogin }) {
           )}
         </div>
       </section>
+      )}
 
       {/* ============================================================ */}
       {/* 5. IEI MEMBERSHIP (Card / Registration & Google Form)        */}
       {/* ============================================================ */}
-      <section id="membership" className="py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-br from-iei-navy-950 via-slate-900 to-iei-navy-950 text-white">
+      {(activePage === 'home' || activePage === 'membership') && (
+      <section id="membership" className="py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-br from-iei-navy-950 via-slate-900 to-iei-navy-950 text-white flex-1">
+        {/* Dedicated Membership Page: Member Benefits Overview */}
+        {activePage === 'membership' && (
+          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+            {[
+              { title: 'Official IEI Student Membership Card', desc: 'Recognized across 125+ IEI Centres in India and partner international engineering bodies.' },
+              { title: 'National Symposiums & Hackathons', desc: 'Priority registration and participation in technical workshops, seminars, and national competitions.' },
+              { title: 'Research Grants & Springer Journals', desc: 'Eligibility for IEI R&D student project funding and access to technical publications.' },
+              { title: 'Professional Charter Career Pathway', desc: 'Direct foundation toward Chartered Engineer (CEng) credentials and institutional leadership roles.' }
+            ].map((b) => (
+              <div key={b.title} className="p-5 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">{b.title}</h3>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">{b.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="max-w-4xl mx-auto bg-gradient-to-r from-iei-navy-900 to-slate-900 p-8 sm:p-12 rounded-3xl border border-amber-400/30 shadow-2xl text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
           
@@ -588,11 +740,13 @@ export function WelcomePage({ onNavigateToLogin }) {
           </div>
         </div>
       </section>
+      )}
 
       {/* ============================================================ */}
       {/* 6. CONTACT DETAILS (Mentor, Faculty Advisor & Chairpersons)  */}
       {/* ============================================================ */}
-      <section id="contacts" className="py-16 sm:py-20 px-4 sm:px-6 bg-white border-b border-slate-200">
+      {(activePage === 'home' || activePage === 'contact-details') && (
+      <section id="contacts" className="py-16 sm:py-20 px-4 sm:px-6 bg-white border-b border-slate-200 flex-1">
         <div className="max-w-5xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="inline-flex items-center gap-1.5 text-amber-600 text-xs font-bold uppercase tracking-wider mb-1">
@@ -724,8 +878,34 @@ export function WelcomePage({ onNavigateToLogin }) {
               </div>
             ))}
           </div>
+
+          {/* Dedicated Contact Page: Institutional Campus Address & Official Mail Banner */}
+          {activePage === 'contact-details' && (
+            <div className="max-w-3xl mx-auto mt-8 p-6 rounded-3xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl bg-iei-navy-950 text-amber-400 shrink-0">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-iei-navy-950">IEI Student Chapter Directorate</h4>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Dr. M.G.R. Educational and Research Institute (Deemed to be University), Periyar E.V.R. High Road, Maduravoyal, Chennai - 600095, Tamil Nadu.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={`mailto:${profile.officialEmail || 'iei@drmgrdu.ac.in'}`}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-iei-navy-950 text-amber-400 text-xs font-bold hover:bg-slate-900 transition-colors shrink-0 self-start sm:self-center"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>{profile.officialEmail || 'iei@drmgrdu.ac.in'}</span>
+              </a>
+            </div>
+          )}
         </div>
       </section>
+      )}
+      </main>
 
       {/* INSTITUTIONAL FOOTER */}
       <footer className="bg-iei-navy-950 text-white py-12 px-4 sm:px-6 border-t border-slate-800">
