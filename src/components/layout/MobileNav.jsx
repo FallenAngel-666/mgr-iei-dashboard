@@ -1,6 +1,7 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
+  Briefcase,
   MessagesSquare, 
   CheckSquare, 
   ShieldAlert, 
@@ -10,7 +11,7 @@ import {
 export function MobileNav({ activeTab, setActiveTab, onOpenMore, pendingApprovalCount = 0 }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'community', label: 'Community', icon: MessagesSquare },
+    { id: 'myWorks', label: 'My Works', icon: Briefcase },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'approvals', label: 'Approvals', icon: ShieldAlert, badge: pendingApprovalCount }
   ];

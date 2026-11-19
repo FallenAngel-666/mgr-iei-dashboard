@@ -196,6 +196,13 @@ CREATE TABLE IF NOT EXISTS `system_audit_logs` (
   KEY `idx_audit_actor` (`actor_username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 15. SYSTEM SETTINGS & WEEKLY RESTRICTION RULES
+CREATE TABLE IF NOT EXISTS `iei_system_settings` (
+  `id` VARCHAR(100) NOT NULL PRIMARY KEY,
+  `data_json` LONGTEXT NOT NULL,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Note: For optional SQL-engine level immutability triggers (if your Hostinger MySQL user
 -- grants TRIGGER privilege), also import database/immutability_triggers.sql.
 -- Application-level immutability is ALWAYS enforced in public/api/audit.php (append-only).

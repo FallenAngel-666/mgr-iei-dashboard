@@ -76,6 +76,31 @@ export function canAssignWork(role) {
 }
 
 /**
+ * Students Work Analytics Access:
+ * Accessible strictly to Master Administrator and Authorized Staff Coordinator (Antony Xavier Bronson).
+ * Strictly blocked and hidden for ordinary student accounts.
+ */
+export function canAccessWorkAnalytics(user) {
+  if (!user) return false;
+  const role = user.role || '';
+  const username = (user.username || '').toLowerCase();
+  const id = user.id || '';
+
+  const isMaster = isMasterAdmin(role) || 
+                   username === 'admin.master-01' || 
+                   id === 'user-administrator' || 
+                   username === 'sripriyan.jsec-01';
+
+  const isStaff = isStaffCoordinator(role) || 
+                  role === ROLES.STAFF_COORDINATOR || 
+                  id === 'user-staff-coord' || 
+                  username === 'staff.login' || 
+                  username === 'staff.coord-01';
+
+  return isMaster || isStaff;
+}
+
+/**
  * Confidential Membership Directory Access:
  * STRICT RULE: Only Sri Priyan (Joint Secretary), Swathi Nandhana (Membership Director),
  * Ramya Sri (Event Management Head), and the Master Administrator can view and access the Membership Directory.

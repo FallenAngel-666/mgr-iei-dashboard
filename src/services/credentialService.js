@@ -53,9 +53,77 @@ export function generateInstitutionalUsername(name, role, existingMembers = []) 
 export const generateUsername = generateInstitutionalUsername;
 
 /**
+ * Institutional Password Policy Validation:
+ * - Minimum 12 characters
+ * - Uppercase letters (A-Z)
+ * - Lowercase letters (a-z)
+ * - Numbers (0-9)
+ * - Special characters (!@#$%^&*...)
+ * - Rejects commonly compromised or predictable passwords
+ */
+export const COMMONLY_COMPROMISED_PASSWORDS = [
+  'password', 'password123', 'admin123456', 'qwerty123456',
+  'iei123456789', 'drmgrdu12345', 'changeme1234', 'welcome12345',
+  '123456789012', 'administrator'
+];
+
+export function validatePasswordPolicy(password = '') {
+  const p = String(password || '');
+  const errors = [];
+
+  if (p.length < 12) {
+    errors.push('Minimum 12 characters required');
+  }
+  if (!/[A-Z]/.test(p)) {
+    errors.push('At least one uppercase letter (A-Z) required');
+  }
+  if (!/[a-z]/.test(p)) {
+    errors.push('At least one lowercase letter (a-z) required');
+  }
+  if (!/[0-9]/.test(p)) {
+    errors.push('At least one number (0-9) required');
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(p)) {
+    errors.push('At least one special character (!@#$%^&*...) required');
+  }
+
+  const lower = p.toLowerCase();
+  const isCompromised = COMMONLY_COMPROMISED_PASSWORDS.some(common => lower.includes(common));
+  if (isCompromised) {
+    errors.push('Password contains a predictable or commonly compromised sequence');
+  }
+
+  // Calculate score (0 to 5)
+  let score = 0;
+  if (p.length >= 12) score += 1;
+  if (p.length >= 14) score += 1;
+  if (/[A-Z]/.test(p) && /[a-z]/.test(p)) score += 1;
+  if (/[0-9]/.test(p)) score += 1;
+  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(p)) score += 1;
+  if (isCompromised) score = Math.max(0, score - 2);
+
+  let strength = 'Weak';
+  if (score >= 5) strength = 'Excellent';
+  else if (score >= 4) strength = 'Strong';
+  else if (score >= 3) strength = 'Good';
+  else if (score >= 2) strength = 'Fair';
+
+  return {
+    isValid: errors.length === 0,
+    score,
+    strength,
+    errors
+  };
+}
+
+export function isPasswordWeak(password = '') {
+  return !validatePasswordPolicy(password).isValid;
+}
+
+/**
  * Generate a strong, policy-compliant institutional password:
- * Pattern: IEI#FirstName*XXXX (XXXX = 4 pseudo-random numbers)
- * e.g., "IEI#Kavitha*7492" or "IEI#Ramya*9164"
+ * Pattern: IEI#FirstName*2026!XXXX (>= 16 characters)
+ * Meets all 5 criteria: uppercase, lowercase, numbers, special characters, length >= 12.
  */
 export function generateStrongPassword(name) {
   const token = (name || 'Member')
@@ -65,7 +133,7 @@ export function generateStrongPassword(name) {
 
   const capitalized = token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
   const rand4 = Math.floor(1000 + Math.random() * 9000);
-  return `IEI#${capitalized}*${rand4}`;
+  return `IEI#${capitalized}*2026!${rand4}`;
 }
 
 /**

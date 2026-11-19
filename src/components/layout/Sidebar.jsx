@@ -7,13 +7,16 @@ import {
   canAccessMembersDirectory,
   canAccessManagementReports,
   canAccessProfileUpdate,
-  canAccessActivityConsole
+  canAccessActivityConsole,
+  canAccessWorkAnalytics
 } from '../../config/roles';
 import { 
   LayoutDashboard, 
+  Briefcase,
   MessagesSquare, 
   CheckSquare, 
   ShieldAlert, 
+  BarChart3,
   CalendarCheck, 
   Users, 
   Calendar, 
@@ -43,6 +46,12 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
       badge: null
     },
     {
+      id: 'myWorks',
+      label: 'My Works',
+      icon: Briefcase,
+      badge: null
+    },
+    {
       id: 'community',
       label: 'Community Updates',
       icon: MessagesSquare,
@@ -60,6 +69,12 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
       icon: ShieldAlert,
       badge: canReview && pendingApprovalCount > 0 ? pendingApprovalCount : null,
       badgeColor: 'bg-amber-500'
+    },
+    {
+      id: 'analytics',
+      label: 'Students Work Analytics',
+      icon: BarChart3,
+      badge: null
     },
     {
       id: 'attendance',
@@ -120,8 +135,10 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
   const canSeeMembers = canAccessMembersDirectory(currentUser);
   const canEditPublicProfile = canAccessProfileUpdate(role);
   const canSeeConsole = canAccessActivityConsole(currentUser);
+  const canSeeAnalytics = canAccessWorkAnalytics(currentUser);
 
   const visibleNavItems = navItems.filter((item) => {
+    if (item.id === 'analytics' && !canSeeAnalytics) return false;
     if (item.id === 'members' && !canSeeMembers) return false;
     if (item.id === 'profileUpdate' && !canEditPublicProfile) return false;
     if (item.id === 'activityConsole' && !canSeeConsole) return false;

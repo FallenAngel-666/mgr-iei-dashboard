@@ -128,3 +128,60 @@ export async function uploadInstitutionalImage(file, folder = 'general') {
 
   return { url: dataUrl, storagePath: null, mode: 'compressed-inline' };
 }
+
+/**
+ * Securely validate and upload any institutional file (image or document).
+ * Used for work submissions, progress evidence, and official reports.
+ */
+export async function uploadFileSafely(file, folder = 'work_evidence') {
+  const check = validateUploadFile(file, { imagesOnly: false });
+  if (!check.valid) {
+    throw new Error(check.error);
+  }
+
+  // If it's an image, route through the image compressor for performance
+  if (file.type.startsWith('image/')) {
+    return uploadInstitutionalImage(file, folder);
+  }
+
+  const safeName = (file.name || 'document.bin').replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  // 100% Hostinger Storage Mode
+  if (isHostingerBackend()) {
+    const res = await hostingerUploadFile(file, safeName, folder);
+    return {
+      url: res.url,
+      storagePath: res.storagePath,
+      uploadId: res.id,
+      mode: 'hostinger-storage'
+    };
+  }
+
+  // Firebase Storage Mode
+  if (storage) {
+    try {
+      const path = `iei_uploads/${folder}/${Date.now()}_${safeName}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file, { contentType: file.type || 'application/octet-stream' });
+      const downloadUrl = await getDownloadURL(storageRef);
+      return { url: downloadUrl, storagePath: path, mode: 'firebase-storage' };
+    } catch (err) {
+      console.warn('Firebase Storage upload unavailable for document:', err.message);
+    }
+  }
+
+  // Fallback: Read as Data URL
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        url: reader.result,
+        storagePath: null,
+        mode: 'document-inline'
+      });
+    };
+    reader.onerror = () => reject(new Error('Failed to read file as data URL.'));
+    reader.readAsDataURL(file);
+  });
+}
+

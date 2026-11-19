@@ -21,7 +21,7 @@ export const INITIAL_MEMBERS = [
   },
   {
     id: 'user-staff-coord',
-    name: 'Staff Coordinator',
+    name: 'Antony Xavier Bronson',
     role: ROLES.STAFF_COORDINATOR,
     username: 'staff.login',
     secondaryUsername: 'staff.coord-01',
@@ -33,7 +33,7 @@ export const INITIAL_MEMBERS = [
     membershipId: 'IEI-FAC-001',
     year: 'Faculty Advisor',
     status: 'Active',
-    avatar: 'https://ui-avatars.com/api/?name=Staff+Coordinator&background=0B2545&color=fff',
+    avatar: 'https://ui-avatars.com/api/?name=Antony+Xavier+Bronson&background=0B2545&color=fff',
     joinedDate: '2023-06-15'
   },
   {

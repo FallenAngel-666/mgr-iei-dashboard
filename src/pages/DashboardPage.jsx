@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subscribeToData } from '../services/firebaseService';
-import { WORK_STATUSES, isFirstLevelApprover, isStaffCoordinator, canAccessMembersDirectory, canAccessProfileUpdate, canAccessActivityConsole } from '../config/roles';
+import { 
+  WORK_STATUSES, 
+  isFirstLevelApprover, 
+  isStaffCoordinator, 
+  isMasterAdmin,
+  canAccessMembersDirectory, 
+  canAccessProfileUpdate, 
+  canAccessActivityConsole,
+  canAccessWorkAnalytics 
+} from '../config/roles';
 
 // Components
 import { Navbar } from '../components/layout/Navbar';
@@ -13,7 +22,10 @@ import { MetricCards } from '../components/dashboard/MetricCards';
 import { WeeklyStatusSection } from '../components/dashboard/WeeklyStatusSection';
 import { PendingApprovalsCard } from '../components/dashboard/PendingApprovalsCard';
 import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
+import { WeeklyRestrictionSettingsCard } from '../components/dashboard/WeeklyRestrictionSettingsCard';
 
+import { MyWorksView } from '../components/tasks/MyWorksView';
+import { StudentsWorkAnalyticsView } from '../components/analytics/StudentsWorkAnalyticsView';
 import { CommunityFeed } from '../components/community/CommunityFeed';
 import { TaskList } from '../components/tasks/TaskList';
 import { ApprovalWorkflowView } from '../components/approvals/ApprovalWorkflowView';
@@ -84,6 +96,16 @@ export function DashboardPage() {
         targetId: 'activityConsole'
       });
     }
+    if (activeTab === 'analytics' && !canAccessWorkAnalytics(currentUser)) {
+      recordActivity({
+        actor: currentUser,
+        action: AUDIT_ACTIONS.SECURITY_ACCESS_DENIED,
+        module: AUDIT_MODULES.SECURITY,
+        status: 'DENIED',
+        details: `Unauthorized navigation attempt to Students Work Analytics by ${currentUser?.name || 'Guest'} (${currentUser?.role || 'Unknown'}). Access blocked.`,
+        targetId: 'analytics'
+      });
+    }
   }, [activeTab, currentUser]);
 
   // Compute pending approvals for active user
@@ -136,6 +158,11 @@ export function DashboardPage() {
             {/* DASHBOARD TAB */}
             {activeTab === 'dashboard' && (
               <div className="space-y-6">
+                {/* Master Admin / Staff Coordinator: Weekly Submission Restriction Setting */}
+                {(isMasterAdmin(currentUser?.role) || isStaffCoordinator(currentUser?.role) || currentUser?.username === 'sripriyan.jsec-01') && (
+                  <WeeklyRestrictionSettingsCard />
+                )}
+
                 {/* Metric Summary Cards */}
                 <MetricCards
                   members={members}
@@ -168,6 +195,11 @@ export function DashboardPage() {
               </div>
             )}
 
+            {/* MY WORKS TAB - Personal Work Register for Every Logged-In User */}
+            {activeTab === 'myWorks' && (
+              <MyWorksView tasks={tasks} />
+            )}
+
             {/* COMMUNITY UPDATES TAB */}
             {activeTab === 'community' && (
               <CommunityFeed updates={updates} />
@@ -185,6 +217,29 @@ export function DashboardPage() {
             {/* TWO-LEVEL APPROVAL WORKFLOW TAB */}
             {activeTab === 'approvals' && (
               <ApprovalWorkflowView tasks={tasks} />
+            )}
+
+            {/* STUDENTS WORK ANALYTICS TAB - Restricted to Master Admin & Staff Coordinator */}
+            {activeTab === 'analytics' && (
+              canAccessWorkAnalytics(currentUser) ? (
+                <StudentsWorkAnalyticsView tasks={tasks} members={members} />
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-md mx-auto my-12 shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                    🔒
+                  </div>
+                  <h3 className="text-base font-bold text-iei-navy-950">Analytics Access Restricted</h3>
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                    Students Work Analytics is confidential and strictly accessible only to the <strong>Master Administrator</strong> and <strong>Chapter Staff Coordinator</strong>.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('dashboard')}
+                    className="mt-5 px-4 py-2 bg-iei-navy-900 hover:bg-iei-navy-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    Return to Chapter Dashboard
+                  </button>
+                </div>
+              )
             )}
 
             {/* COMMITTEE MEETING ATTENDANCE TAB */}

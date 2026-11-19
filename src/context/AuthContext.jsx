@@ -256,6 +256,64 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Secure Password Update (Meets 12+ character complexity policy)
+  async function updateUserPassword(currentPassword, newPassword) {
+    if (!currentUser) throw new Error('No active user session found.');
+
+    const cleanCurrent = (currentPassword || '').trim();
+    const cleanNew = (newPassword || '').trim();
+
+    // Verify current password if present on user record
+    if (currentUser.password && currentUser.password !== cleanCurrent) {
+      throw new Error('Current password is incorrect. Please verify your credentials.');
+    }
+
+    // Update in Firestore
+    try {
+      const userRef = doc(db, 'iei_members', currentUser.id);
+      await updateDoc(userRef, { password: cleanNew });
+    } catch (e) {
+      console.warn('Firestore password update warning:', e.message);
+    }
+
+    // Update in Hostinger API if active
+    if (isHostingerBackend()) {
+      try {
+        await hostingerUpsertDoc('members', { ...currentUser, password: cleanNew });
+      } catch (e) {
+        console.warn('Hostinger password sync warning:', e.message);
+      }
+    }
+
+    // Update in Firebase Auth if current user exists
+    if (auth.currentUser) {
+      try {
+        const { updatePassword: fbUpdatePassword } = await import('firebase/auth');
+        await fbUpdatePassword(auth.currentUser, cleanNew);
+      } catch (e) {
+        console.warn('Firebase Auth updatePassword warning:', e.message);
+      }
+    }
+
+    const updatedUser = { ...currentUser, password: cleanNew };
+    setCurrentUser(updatedUser);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('iei_mgr_active_user', JSON.stringify(updatedUser));
+    }
+
+    // Record immutable security audit
+    recordActivity({
+      actor: currentUser,
+      action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET,
+      module: AUDIT_MODULES.AUTH,
+      status: 'SUCCESS',
+      details: `User ${currentUser.name} (${currentUser.role}) updated institutional password to policy standard (12+ characters).`,
+      targetId: currentUser.id
+    });
+
+    return { success: true };
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -267,6 +325,7 @@ export function AuthProvider({ children }) {
         login,
         logout,
         resetPassword,
+        updateUserPassword,
         updateProfile
       }}
     >

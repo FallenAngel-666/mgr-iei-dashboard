@@ -67,6 +67,20 @@ lines.push(
   `) ON DUPLICATE KEY UPDATE official_email=VALUES(official_email), data_json=VALUES(data_json);`
 );
 
+// 3. Seed System Settings (Weekly Work Submission Restriction default ON)
+const settingsJson = JSON.stringify({
+  weeklyRestriction: true,
+  description: 'Students can submit work only for the current week.',
+  updatedAt: new Date().toISOString(),
+  updatedByName: 'Administrator',
+  updatedByRole: 'Administrator'
+});
+lines.push(
+  `INSERT INTO iei_system_settings (id, data_json) VALUES (` +
+  `'submission_rules', ${sqlEscape(settingsJson)}` +
+  `) ON DUPLICATE KEY UPDATE data_json=VALUES(data_json);`
+);
+
 lines.push('');
 fs.writeFileSync(outPath, lines.join('\n'), 'utf8');
 console.log(`[SUCCESS] Generated Hostinger MySQL seed file: ${outPath}`);

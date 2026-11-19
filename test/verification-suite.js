@@ -13,6 +13,7 @@ import {
   canRecordAttendance,
   canAccessProfileUpdate,
   canAccessActivityConsole,
+  canAccessWorkAnalytics,
   canOverrideAnything
 } from '../src/config/roles.js';
 
@@ -66,20 +67,32 @@ import { doc, getDoc, collection, getDocs, setDoc, deleteDoc } from 'firebase/fi
 import {
   generateUsername,
   generateStrongPassword,
+  validatePasswordPolicy,
+  isPasswordWeak,
   formatCredentialNotice
 } from '../src/services/credentialService.js';
 
 import {
   getISOWeekDetails,
   getISOWeekDateRange,
-  generateWeekOptions
+  generateWeekOptions,
+  isDateInCurrentWeekKolkata,
+  getCurrentWeekBoundariesKolkata,
+  getKolkataCurrentDateString
 } from '../src/utils/dateUtils.js';
 
 import {
   submitWorkReport,
+  recordWorkProgress,
+  validateSubmissionDatePolicy,
   processFirstLevelReview,
   processFinalApproval
 } from '../src/services/approvalService.js';
+
+import {
+  getSubmissionRules,
+  updateSubmissionRules
+} from '../src/services/firebaseService.js';
 
 async function runTestSuite() {
   console.log('================================================================');
@@ -182,12 +195,14 @@ async function runTestSuite() {
     assert.ok(admin.isMasterAdmin === true);
   });
 
-  test('Staff Coordinator (Staff Login) has username staff.login and staff.coord-01 alias', () => {
+  test('Staff Coordinator (Staff Login) has username staff.login, Antony Xavier Bronson name, and staff.coord-01 alias', () => {
     const staff = loadedMembers.find((m) => m.role === ROLES.STAFF_COORDINATOR);
     assert.ok(staff, 'Staff Coordinator account exists');
     assert.strictEqual(staff.username, 'staff.login');
     assert.strictEqual(staff.secondaryUsername, 'staff.coord-01');
-    assert.strictEqual(staff.name, 'Staff Coordinator');
+    assert.strictEqual(staff.name, 'Antony Xavier Bronson');
+    assert.ok(!loadedMembers.some((m) => m.name.toLowerCase().includes('kavitha')), 'Kavitha is strictly absent from active members register');
+    assert.ok(!loadedMembers.some((m) => m.username === 'kavitha.exec-12'), 'No kavitha.exec-12 account exists');
     assert.ok(!loadedMembers.some((m) => m.name.toLowerCase().includes('senthil')), 'No Senthil Kumar exists');
   });
 
@@ -1244,6 +1259,193 @@ async function runTestSuite() {
       }
       resetToCleanSlate();
     }
+  });
+
+  // 15. STRONGER PASSWORD SECURITY POLICY
+  console.log('\n--- 15. Stronger Password Security Policy ---');
+  test('Password policy rejects short passwords (< 12 chars)', () => {
+    const res = validatePasswordPolicy('Ab1!short');
+    assert.strictEqual(res.isValid, false);
+    assert.ok(res.errors.some(e => e.includes('Minimum 12 characters')));
+  });
+
+  test('Password policy requires uppercase, lowercase, numbers, and special characters', () => {
+    assert.strictEqual(validatePasswordPolicy('lowercaseonly123!').isValid, false);
+    assert.strictEqual(validatePasswordPolicy('UPPERCASEONLY123!').isValid, false);
+    assert.strictEqual(validatePasswordPolicy('NoNumbersOrSpecialChar').isValid, false);
+    assert.strictEqual(validatePasswordPolicy('NoSpecialChar12345').isValid, false);
+  });
+
+  test('Password policy rejects commonly compromised sequences', () => {
+    const res = validatePasswordPolicy('password123456789!A');
+    assert.strictEqual(res.isValid, false);
+    assert.ok(res.errors.some(e => e.includes('compromised')));
+  });
+
+  test('generateStrongPassword generates >= 14 char compliant password', () => {
+    const pwd = generateStrongPassword('Sriman');
+    assert.ok(pwd.length >= 14, `Expected length >= 14, got ${pwd.length}`);
+    const check = validatePasswordPolicy(pwd);
+    assert.strictEqual(check.isValid, true);
+    assert.ok(check.score >= 4);
+    assert.ok(['Strong', 'Excellent'].includes(check.strength));
+  });
+
+  // 16. WEEKLY WORK SUBMISSION RESTRICTION ALGORITHM
+  console.log('\n--- 16. Weekly Work Submission Restriction Algorithm ---');
+  test('Asia/Kolkata current week calculates Monday to Sunday boundaries', () => {
+    const boundaries = getCurrentWeekBoundariesKolkata();
+    assert.ok(boundaries.monday instanceof Date);
+    assert.ok(boundaries.sunday instanceof Date);
+    assert.ok(boundaries.sunday.getTime() > boundaries.monday.getTime());
+    // Difference between Monday 00:00:00 and Sunday 23:59:59 is ~6.999 days
+    const diffDays = (boundaries.sunday.getTime() - boundaries.monday.getTime()) / (1000 * 60 * 60 * 24);
+    assert.ok(diffDays >= 6.9);
+  });
+
+  test('isDateInCurrentWeekKolkata correctly identifies current week vs historical dates', () => {
+    const todayYMD = getKolkataCurrentDateString();
+    assert.strictEqual(isDateInCurrentWeekKolkata(todayYMD), true);
+    assert.strictEqual(isDateInCurrentWeekKolkata('2020-01-01'), false);
+    assert.strictEqual(isDateInCurrentWeekKolkata('2025-05-10'), false);
+  });
+
+  await asyncTest('Weekly restriction ON blocks previous-week submission and OFF allows historical submission', async () => {
+    const adminUser = { id: 'user-administrator', name: 'Administrator', role: ROLES.ADMINISTRATOR, username: 'admin.master-01' };
+    
+    // Turn restriction ON
+    await updateSubmissionRules(true, adminUser);
+    const rulesOn = await getSubmissionRules();
+    assert.strictEqual(rulesOn.weeklyRestriction, true);
+    assert.strictEqual(rulesOn.description, 'Students can submit work only for the current week.');
+
+    // Attempt past week date should throw
+    let errorThrown = false;
+    try {
+      await validateSubmissionDatePolicy('2025-01-15');
+    } catch (e) {
+      errorThrown = true;
+      assert.ok(e.message.includes('Weekly submission restriction is active'));
+    }
+    assert.strictEqual(errorThrown, true, 'Should reject past date when restriction is ON');
+
+    // Current week date should succeed
+    const currentOk = await validateSubmissionDatePolicy(getKolkataCurrentDateString());
+    assert.strictEqual(currentOk, true);
+
+    // Turn restriction OFF
+    await updateSubmissionRules(false, adminUser);
+    const rulesOff = await getSubmissionRules();
+    assert.strictEqual(rulesOff.weeklyRestriction, false);
+    assert.strictEqual(rulesOff.description, 'Students can submit work for any previous date.');
+
+    // Historical date now succeeds
+    const pastOk = await validateSubmissionDatePolicy('2025-01-15');
+    assert.strictEqual(pastOk, true, 'Should permit past date when restriction is OFF');
+
+    // Restore restriction ON
+    await updateSubmissionRules(true, adminUser);
+  });
+
+  // 17. MY WORKS: PERSONAL ASSIGNED WORK & DURATION TRACKING
+  console.log('\n--- 17. My Works & Duration Tracking ---');
+  await asyncTest('Task progress recording preserves duration in hours and minutes and accumulates history', async () => {
+    const testTask = await createTask({
+      title: 'IEI Web Portal Audit & Optimization',
+      description: 'Audit database performance and responsive layout',
+      assignedToId: 'user-exec-aakanish',
+      assignedToName: 'AAKANISH ANANTHIKA E',
+      assignedToRole: ROLES.EXECUTIVE_MEMBER,
+      assignedById: 'user-chair-sriman',
+      assignedByName: 'SRIMAN NARAYANA MOORTHY S',
+      assignedByRole: ROLES.CHAIRMAN,
+      priority: 'High',
+      status: WORK_STATUSES.ASSIGNED
+    });
+
+    const studentUser = { id: 'user-exec-aakanish', name: 'AAKANISH ANANTHIKA E', role: ROLES.EXECUTIVE_MEMBER };
+
+    // Record Update 1: 2 hours 30 minutes (progress 40%)
+    const updated1 = await recordWorkProgress(
+      testTask,
+      {
+        progressPercentage: 40,
+        workDate: getKolkataCurrentDateString(),
+        hoursWorked: 2,
+        minutesWorked: 30,
+        description: 'Completed responsive audit and mobile drawer checks',
+        completedWork: 'Audited 6 viewports',
+        remainingWork: 'Performance benchmarks',
+        isFinalReport: false
+      },
+      studentUser
+    );
+
+    assert.strictEqual(updated1.progress, 40);
+    assert.strictEqual(updated1.status, WORK_STATUSES.IN_PROGRESS);
+    assert.strictEqual(updated1.totalMinutesWorked, 150);
+    assert.strictEqual(updated1.totalHoursWorked, 2.5);
+    assert.strictEqual(updated1.progressHistory.length, 1);
+
+    // Record Update 2: 1 hour 45 minutes (progress 100% final report)
+    const updated2 = await recordWorkProgress(
+      updated1,
+      {
+        progressPercentage: 100,
+        workDate: getKolkataCurrentDateString(),
+        hoursWorked: 1,
+        minutesWorked: 45,
+        description: 'Finished performance benchmarks and report',
+        completedWork: 'All tests pass',
+        remainingWork: 'None',
+        isFinalReport: true
+      },
+      studentUser
+    );
+
+    assert.strictEqual(updated2.progress, 100);
+    assert.strictEqual(updated2.status, WORK_STATUSES.PENDING_FIRST_LEVEL); // Member report requires Level 1 approval
+    assert.strictEqual(updated2.totalMinutesWorked, 255); // 150 + 105 = 255 mins = 4.25 hrs
+    assert.strictEqual(updated2.totalHoursWorked, 4.25);
+    assert.strictEqual(updated2.progressHistory.length, 2);
+
+    // Clean up test task
+    await deleteTask(testTask.id);
+  });
+
+  // 18. STUDENTS WORK ANALYTICS PERMISSIONS & CALCULATIONS
+  console.log('\n--- 18. Students Work Analytics ---');
+  test('canAccessWorkAnalytics permits Master Admin and Staff Coordinator, blocks student members', () => {
+    const admin = { id: 'user-administrator', role: ROLES.ADMINISTRATOR, username: 'admin.master-01' };
+    const staff = { id: 'user-staff-coord', role: ROLES.STAFF_COORDINATOR, username: 'staff.login', name: 'Antony Xavier Bronson' };
+    const jsec = { id: 'user-jsec-sripriyan', role: ROLES.JOINT_SECRETARY, username: 'sripriyan.jsec-01' };
+    const student = { id: 'user-exec-aakanish', role: ROLES.EXECUTIVE_MEMBER, username: 'aakanish.exec-01' };
+    const member = { id: 'user-tres-lokeshvari', role: ROLES.TREASURER, username: 'lokeshvari.tres-01' };
+
+    assert.strictEqual(canAccessWorkAnalytics(admin), true);
+    assert.strictEqual(canAccessWorkAnalytics(staff), true);
+    assert.strictEqual(canAccessWorkAnalytics(jsec), true);
+    assert.strictEqual(canAccessWorkAnalytics(student), false);
+    assert.strictEqual(canAccessWorkAnalytics(member), false);
+  });
+
+  // 19. ACCOUNT NAME & INTEGRITY: ANTONY XAVIER BRONSON & NO KAVITHA
+  console.log('\n--- 19. Account Name & Integrity Verification ---');
+  test('Staff Coordinator account displays Antony Xavier Bronson across all systems', () => {
+    const staff = loadedMembers.find(m => m.id === 'user-staff-coord');
+    assert.ok(staff);
+    assert.strictEqual(staff.name, 'Antony Xavier Bronson');
+    assert.strictEqual(staff.email, 'iei@drmgrdu.ac.in');
+  });
+
+  test('Public profile faculty advisor is Dr. Antony Xavier Bronson with iei@drmgrdu.ac.in', () => {
+    assert.strictEqual(DEFAULT_PUBLIC_PROFILE.facultyAdvisor.name, 'Dr. Antony Xavier Bronson');
+    assert.strictEqual(DEFAULT_PUBLIC_PROFILE.facultyAdvisor.email, 'iei@drmgrdu.ac.in');
+  });
+
+  test('Zero active committee records or listings contain Kavitha', () => {
+    const hasKavitha = loadedMembers.some(m => m.name.toLowerCase().includes('kavitha') || m.username.includes('kavitha'));
+    assert.strictEqual(hasKavitha, false);
   });
 
   console.log('\n================================================================');

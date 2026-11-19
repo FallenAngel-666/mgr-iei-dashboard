@@ -23,6 +23,7 @@ $ALLOWED_TABLES = [
     'certificates'  => 'iei_certificates',
     'achievements'  => 'iei_achievements',
     'notifications' => 'iei_notifications',
+    'settings'      => 'iei_system_settings',
 ];
 
 if (!isset($ALLOWED_TABLES[$collection])) {

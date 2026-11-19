@@ -65,7 +65,7 @@ export const DEFAULT_PUBLIC_PROFILE = {
     email: 'iei@drmgrdu.ac.in'
   },
   facultyAdvisor: {
-    name: 'Dr. Anthony Xavier',
+    name: 'Dr. Antony Xavier Bronson',
     designation: 'Add. Secretary',
     roleLabel: 'Faculty Advisor',
     email: 'iei@drmgrdu.ac.in'

@@ -99,7 +99,7 @@ export function TaskDetailModal({
           </p>
 
           {/* People & Dates Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-slate-200 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-3 border-t border-slate-200 text-xs">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Assigned To</span>
               <span className="font-bold text-slate-800">{task.assignedToName}</span>
@@ -116,7 +116,13 @@ export function TaskDetailModal({
             </div>
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Due Date</span>
-              <span className="font-medium text-slate-700">{task.dueDate || 'N/A'}</span>
+              <span className="font-medium text-slate-700">{task.dueDate || task.deadline || 'Ongoing'}</span>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Duration</span>
+              <span className="font-bold font-mono text-emerald-800">
+                {task.totalHoursWorked || 0} hrs ({task.totalMinutesWorked || 0} mins)
+              </span>
             </div>
           </div>
         </div>
@@ -286,12 +292,45 @@ export function TaskDetailModal({
           )}
 
           <div className="space-y-2">
-            {!task.updates || task.updates.length === 0 ? (
+            {/* Detailed Progress History Log */}
+            {Array.isArray(task.progressHistory) && task.progressHistory.length > 0 && (
+              <div className="space-y-2 mb-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Detailed Work & Duration History ({task.progressHistory.length} logs):
+                </span>
+                {task.progressHistory.slice().reverse().map((entry, idx) => (
+                  <div key={entry.id || idx} className="p-3 bg-white rounded-xl border border-slate-200 text-xs space-y-1.5 shadow-2xs">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-iei-navy-950">
+                        {entry.isFinalReport ? 'Final Report' : `Progress (${entry.progressPercentage}%)`}
+                      </span>
+                      <span className="font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        {entry.hoursWorked || 0}h {entry.minutesWorked || 0}m logged
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Work Date: {entry.workDate || 'N/A'} &bull; Updated by {entry.updatedByName || task.assignedToName}
+                    </div>
+                    {entry.description && (
+                      <p className="text-slate-700 bg-slate-50 p-2 rounded-lg leading-relaxed">{entry.description}</p>
+                    )}
+                    {(entry.completedWork || entry.remainingWork) && (
+                      <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600">
+                        {entry.completedWork && <div><strong>Completed:</strong> {entry.completedWork}</div>}
+                        {entry.remainingWork && <div><strong>Remaining:</strong> {entry.remainingWork}</div>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(!task.updates || task.updates.length === 0) && (!task.progressHistory || task.progressHistory.length === 0) ? (
               <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">
                 No progress updates posted yet.
               </p>
             ) : (
-              task.updates.map((up) => (
+              (task.updates || []).map((up) => (
                 <div key={up.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
                   <div className="flex items-center justify-between text-[11px] mb-1">
                     <span className="font-bold text-iei-navy-900">

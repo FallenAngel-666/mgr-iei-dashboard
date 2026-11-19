@@ -523,7 +523,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                   <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
                     {profile.facultyAdvisor?.roleLabel || 'Faculty Advisor'}
                   </span>
-                  <p className="text-base font-black mt-1">{profile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}</p>
+                  <p className="text-base font-black mt-1">{profile.facultyAdvisor?.name || 'Dr. Antony Xavier Bronson'}</p>
                   <p className="text-xs text-slate-300 mt-0.5">{profile.facultyAdvisor?.designation || 'Add. Secretary'}</p>
                 </div>
               </div>
@@ -805,7 +805,7 @@ export function WelcomePage({ onNavigateToLogin }) {
                   <ShieldCheck className="w-4 h-4 text-amber-400" />
                 </div>
                 <h3 className="text-lg font-black text-white">
-                  {profile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}
+                  {profile.facultyAdvisor?.name || 'Dr. Antony Xavier Bronson'}
                 </h3>
                 <div className="text-xs text-amber-300 font-semibold mt-1 flex items-center gap-1.5">
                   <span>{profile.facultyAdvisor?.designation || 'Add. Secretary'}</span>

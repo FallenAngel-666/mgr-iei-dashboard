@@ -962,6 +962,113 @@ export async function ensureCloudSeeded() {
   }
 }
 
+// ============================================================================
+// SYSTEM SETTINGS: WEEKLY WORK SUBMISSION RESTRICTION
+// ============================================================================
+export const DEFAULT_SUBMISSION_RULES = {
+  weeklyRestriction: true,
+  description: 'Students can submit work only for the current week.',
+  updatedAt: new Date().toISOString(),
+  updatedByName: 'Administrator',
+  updatedByRole: 'Administrator'
+};
+
+let submissionRulesStore = getLocalData('submission_rules', DEFAULT_SUBMISSION_RULES);
+const submissionRulesSubscribers = new Set();
+
+export function subscribeToSubmissionRules(callback) {
+  submissionRulesSubscribers.add(callback);
+  callback(submissionRulesStore);
+  return () => submissionRulesSubscribers.delete(callback);
+}
+
+export async function getSubmissionRules() {
+  if (isHostingerBackend()) {
+    return submissionRulesStore;
+  }
+  if (!db) return submissionRulesStore;
+  try {
+    const snap = await getDoc(doc(db, 'iei_system_settings', 'submission_rules'));
+    if (snap.exists()) {
+      submissionRulesStore = { ...DEFAULT_SUBMISSION_RULES, ...snap.data() };
+      setLocalData('submission_rules', submissionRulesStore);
+      return submissionRulesStore;
+    }
+  } catch (e) {
+    console.warn('Error reading submission rules:', e.message);
+  }
+  return submissionRulesStore;
+}
+
+export async function updateSubmissionRules(newSetting, adminUser) {
+  const isMaster = adminUser?.role === 'Administrator' || 
+                   adminUser?.username === 'admin.master-01' || 
+                   adminUser?.id === 'user-administrator' || 
+                   adminUser?.role === 'Joint Secretary' || 
+                   adminUser?.username === 'sripriyan.jsec-01';
+  if (!isMaster) {
+    throw new Error('Unauthorized: Only Master Administrator can change the Weekly Work Submission Restriction setting.');
+  }
+
+  const previousSetting = Boolean(submissionRulesStore.weeklyRestriction);
+  const nextSetting = Boolean(newSetting);
+
+  const updatedRules = {
+    weeklyRestriction: nextSetting,
+    description: nextSetting
+      ? 'Students can submit work only for the current week.'
+      : 'Students can submit work for any previous date.',
+    updatedAt: new Date().toISOString(),
+    updatedById: adminUser.id || 'admin',
+    updatedByName: adminUser.name || 'Administrator',
+    updatedByRole: adminUser.role || 'Administrator'
+  };
+
+  submissionRulesStore = updatedRules;
+  setLocalData('submission_rules', updatedRules);
+  submissionRulesSubscribers.forEach(cb => {
+    try { cb(updatedRules); } catch (e) { console.error(e); }
+  });
+
+  if (!isHostingerBackend() && db) {
+    try {
+      await setDoc(doc(db, 'iei_system_settings', 'submission_rules'), updatedRules);
+    } catch (e) {
+      console.warn('Failed to sync submission rules to Firestore:', e.message);
+    }
+  }
+
+  // Record in immutable audit trail
+  recordActivity({
+    actor: adminUser,
+    action: AUDIT_ACTIONS.SUBMISSION_SETTING_CHANGED,
+    module: AUDIT_MODULES.SETTINGS,
+    status: 'SUCCESS',
+    details: `Weekly Work Submission Restriction changed from ${previousSetting ? 'ON' : 'OFF'} to ${nextSetting ? 'ON' : 'OFF'} by ${adminUser.name} (${adminUser.role}).`,
+    previousValues: { weeklyRestriction: previousSetting },
+    newValues: { weeklyRestriction: nextSetting }
+  });
+
+  return updatedRules;
+}
+
+// Listen to Firestore changes for real-time submission rule sync across all clients
+if (!isHostingerBackend() && db) {
+  try {
+    onSnapshot(doc(db, 'iei_system_settings', 'submission_rules'), (snap) => {
+      if (snap.exists()) {
+        submissionRulesStore = { ...DEFAULT_SUBMISSION_RULES, ...snap.data() };
+        setLocalData('submission_rules', submissionRulesStore);
+        submissionRulesSubscribers.forEach(cb => {
+          try { cb(submissionRulesStore); } catch (e) { console.error(e); }
+        });
+      }
+    }, (err) => console.warn('Submission rules real-time listener notice:', err.message));
+  } catch (err) {
+    console.warn('Submission rules setup notice:', err.message);
+  }
+}
+
 // Automatically invoke cloud seeding check (Firebase mode only)
 if (!isHostingerBackend()) {
   ensureCloudSeeded().catch(() => {});

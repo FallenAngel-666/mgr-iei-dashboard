@@ -148,3 +148,63 @@ export function generateWeekOptions(tasks = [], baseDate = new Date()) {
     { label: 'All Recorded Weeks (Cumulative)', shortLabel: 'All Weeks', tag: 'all', isCurrent: false }
   ];
 }
+
+/**
+ * Asia/Kolkata (IST) timezone current week boundary helpers:
+ * Strictly defines the current weekly cycle as Monday through Sunday in Asia/Kolkata timezone.
+ */
+export function getKolkataNow() {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + istOffset);
+}
+
+export function getKolkataCurrentDateString() {
+  const d = getKolkataNow();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getCurrentWeekBoundariesKolkata() {
+  const now = getKolkataNow();
+  // Monday is 0, Sunday is 6
+  const dayOfWeek = (now.getDay() + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  const toYMD = (dt) => {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  return {
+    monday,
+    sunday,
+    mondayYMD: toYMD(monday),
+    sundayYMD: toYMD(sunday)
+  };
+}
+
+export function isDateInCurrentWeekKolkata(dateInput) {
+  if (!dateInput) return false;
+  let targetDate;
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    const [y, m, d] = dateInput.split('-').map(Number);
+    targetDate = new Date(y, m - 1, d, 12, 0, 0);
+  } else {
+    targetDate = new Date(dateInput);
+  }
+
+  const { monday, sunday } = getCurrentWeekBoundariesKolkata();
+  return targetDate.getTime() >= monday.getTime() && targetDate.getTime() <= sunday.getTime();
+}

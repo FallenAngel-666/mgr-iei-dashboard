@@ -739,7 +739,7 @@ export function ProfileUpdateView() {
             <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
               <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                 <span className="text-xs font-black text-iei-navy-950 uppercase tracking-wide">
-                  {profile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}
+                  {profile.facultyAdvisor?.name || 'Dr. Antony Xavier Bronson'}
                 </span>
                 <span className="text-[10px] font-bold text-white bg-iei-navy-900 px-2 py-0.5 rounded">
                   Faculty Advisor
@@ -749,7 +749,7 @@ export function ProfileUpdateView() {
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">Faculty Advisor Name *</label>
                 <input
                   type="text"
-                  value={profile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}
+                  value={profile.facultyAdvisor?.name || 'Dr. Antony Xavier Bronson'}
                   onChange={(e) => setProfile({ ...profile, facultyAdvisor: { ...(profile.facultyAdvisor || DEFAULT_PUBLIC_PROFILE.facultyAdvisor), name: e.target.value } })}
                   className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-1 focus:ring-iei-navy-500 bg-white font-bold"
                 />

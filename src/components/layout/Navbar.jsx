@@ -16,14 +16,18 @@ import {
   Edit3,
   Save,
   Loader2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  KeyRound
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
+import { ChangePasswordModal } from '../profile/ChangePasswordModal';
+import { isPasswordWeak } from '../../services/credentialService';
 
 export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
   const { currentUser, logout, updateProfile } = useAuth();
   const { unreadCount } = useNotifications();
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -448,6 +452,36 @@ export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
                   </div>
                 )}
 
+                {/* Password Security Action */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Account Security
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Shield className="w-3.5 h-3.5 text-iei-navy-700" />
+                      <span className="text-xs font-semibold text-slate-700">
+                        {isPasswordWeak(currentUser.password) ? (
+                          <span className="text-amber-600 font-bold">Standard 12+ Char Recommended</span>
+                        ) : (
+                          <span className="text-emerald-700 font-bold">Policy Compliant</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDetailsModalOpen(false);
+                      setIsPasswordModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-iei-navy-950 hover:bg-slate-900 text-amber-400 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>Change Password</span>
+                  </button>
+                </div>
+
                 <div className="pt-2 flex items-center justify-between border-t border-slate-100">
                   <button
                     type="button"
@@ -473,6 +507,12 @@ export function Navbar({ onToggleMobileMenu, onOpenNotifications }) {
           </div>
         </Modal>
       )}
+
+      {/* Institutional Password Security Update Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </header>
   );
 }

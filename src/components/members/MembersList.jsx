@@ -155,7 +155,7 @@ export function MembersList({ members = [] }) {
                 {publicProfile.facultyAdvisor?.roleLabel || 'Faculty Advisor'}
               </span>
               <p className="text-xs font-bold text-white truncate">
-                {publicProfile.facultyAdvisor?.name || 'Dr. Anthony Xavier'}
+                {publicProfile.facultyAdvisor?.name || 'Dr. Antony Xavier Bronson'}
               </p>
               <p className="text-[11px] text-slate-300 truncate">
                 {publicProfile.facultyAdvisor?.designation || 'Add. Secretary'}
@@ -445,30 +445,33 @@ export function MembersList({ members = [] }) {
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Assigned Secure Password
+                    Institutional Password Security
                   </span>
-                  <span className="font-mono font-bold text-emerald-800 text-sm">
-                    {viewingCredentialsMember.password || '••••••••'}
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-mono font-bold text-slate-700 text-xs">
+                      ••••••••••••••••
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Encrypted
+                    </span>
+                  </div>
                 </div>
-                {viewingCredentialsMember.password && (
-                  <button
-                    onClick={() => copyToClipboard(viewingCredentialsMember.password, 'password')}
-                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 flex items-center gap-1 font-semibold text-[11px]"
-                  >
-                    {copiedField === 'password' ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-emerald-600">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy Password</span>
-                      </>
-                    )}
-                  </button>
-                )}
+                <button
+                  onClick={() => copyToClipboard(formatCredentialNotice(viewingCredentialsMember), 'notice')}
+                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 flex items-center gap-1 font-semibold text-[11px]"
+                >
+                  {copiedField === 'notice' ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-600">Copied Notice</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Credentials Notice</span>
+                    </>
+                  )}
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">

@@ -123,5 +123,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // 12. SYSTEM SETTINGS & SUBMISSION RULES
+    match /iei_system_settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }
