@@ -35,19 +35,19 @@ export const DEFAULT_PUBLIC_PROFILE = {
   carouselPhotos: [
     {
       id: 'photo-1',
-      url: '/assets/gallery/gallery-1-rain26-cultural-fest.jpg'
+      url: '/assets/gallery/gallery-1-rain26-cultural-fest.jpg?v=20261119'
     },
     {
       id: 'photo-2',
-      url: '/assets/gallery/gallery-2-rain26-valedictory.jpg'
+      url: '/assets/gallery/gallery-2-rain26-valedictory.jpg?v=20261119'
     },
     {
       id: 'photo-3',
-      url: '/assets/gallery/gallery-3-presidential-felicitation.jpg'
+      url: '/assets/gallery/gallery-3-presidential-felicitation.jpg?v=20261119'
     },
     {
       id: 'photo-4',
-      url: '/assets/gallery/gallery-4-state-centre-delegation.jpg'
+      url: '/assets/gallery/gallery-4-state-centre-delegation.jpg?v=20261119'
     }
   ],
 

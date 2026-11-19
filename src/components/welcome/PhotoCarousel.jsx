@@ -8,10 +8,10 @@ export function PhotoCarousel({ photos = [] }) {
 
   // Fallback default photos if empty (Strictly chapter photographs without logos or text overlays)
   const activePhotos = Array.isArray(photos) && photos.length > 0 ? photos : [
-    { id: 'p1', url: '/assets/gallery/gallery-1-rain26-cultural-fest.jpg' },
-    { id: 'p2', url: '/assets/gallery/gallery-2-rain26-valedictory.jpg' },
-    { id: 'p3', url: '/assets/gallery/gallery-3-presidential-felicitation.jpg' },
-    { id: 'p4', url: '/assets/gallery/gallery-4-state-centre-delegation.jpg' }
+    { id: 'p1', url: '/assets/gallery/gallery-1-rain26-cultural-fest.jpg?v=20261119' },
+    { id: 'p2', url: '/assets/gallery/gallery-2-rain26-valedictory.jpg?v=20261119' },
+    { id: 'p3', url: '/assets/gallery/gallery-3-presidential-felicitation.jpg?v=20261119' },
+    { id: 'p4', url: '/assets/gallery/gallery-4-state-centre-delegation.jpg?v=20261119' }
   ];
 
   // Preload all carousel images into memory for instant, tear-free transitions
