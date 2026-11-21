@@ -35,8 +35,8 @@ if %errorlevel% neq 0 (
 echo.
 echo ======================================================================
 echo    DEPLOYMENT SUCCESSFUL!
-echo    Live Production URL: https://sachin-crackers-smartpos-81c6a.web.app
-echo    Alternative URL:     https://sachin-crackers-smartpos-81c6a.firebaseapp.com
+echo    Live Production URL: https://mgr-iei-dashboard.web.app
+echo    Alternative URL:     https://mgr-iei-dashboard.firebaseapp.com
 echo ======================================================================
 echo.
 pause

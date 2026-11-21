@@ -36,7 +36,37 @@ if (!fs.existsSync(DIST)) {
   fail('dist/ directory not found after vite build.');
 }
 
-// 1. Verify required frontend, .htaccess, PHP 8 API, and storage files exist in dist/
+// 1. Copy database installation scripts and guides into dist/database/
+const distDb = path.join(DIST, 'database');
+if (!fs.existsSync(distDb)) fs.mkdirSync(distDb, { recursive: true });
+
+const dbFilesToCopy = [
+  'schema.sql',
+  'seed.sql',
+  'README.md',
+  'verify.php',
+  'immutability_triggers.sql'
+];
+
+for (const f of dbFilesToCopy) {
+  const src = path.join(ROOT, 'database', f);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(distDb, f));
+    console.log(`  [OK] database/${f} copied to package`);
+  }
+}
+
+// Also copy root guides if they exist
+const guideFiles = ['HOSTINGER_DEPLOYMENT_GUIDE.md', 'DATABASE_SETUP_GUIDE.md', 'SECURITY_AUDIT_REPORT.md'];
+for (const g of guideFiles) {
+  const src = path.join(ROOT, g);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(DIST, g));
+    console.log(`  [OK] ${g} copied to package`);
+  }
+}
+
+// 2. Verify required frontend, .htaccess, PHP 8 API, and storage files exist in dist/
 const requiredFiles = [
   'index.html',
   '.htaccess',
@@ -57,6 +87,11 @@ const requiredFiles = [
   'api/public.php',
   'api/audit.php',
   'api/upload.php',
+  'api/setup.php',
+  'api/verify.php',
+  'database/schema.sql',
+  'database/seed.sql',
+  'database/verify.php',
   'uploads/.htaccess'
 ];
 
@@ -68,12 +103,14 @@ for (const rel of requiredFiles) {
   console.log(`  [OK] dist/${rel}`);
 }
 
-// 2. Verify NO sensitive/secret files leaked into dist/
+// 3. Verify NO sensitive/secret files leaked into dist/
 const forbiddenFiles = [
   '.env',
   '.env.production',
   '.env.local',
   'api/config.php',
+  'api/.installed',
+  'database/seed-from-firestore.sql',
   'COMMITTEE_CREDENTIALS.csv',
   'COMMITTEE_CREDENTIALS.md'
 ];
@@ -84,7 +121,26 @@ for (const f of forbiddenFiles) {
 }
 console.log('  [OK] Zero secret/credential files present in dist/');
 
-// 3. Verify total package size
+// 4. Deep Content Security Inspection of compiled JS assets:
+// Must NOT contain third-party project IDs (sachin-crackers) or hardcoded seed passwords
+console.log('Scanning compiled JS assets for credential & project ID leakage...');
+const assetsDir = path.join(DIST, 'assets');
+if (fs.existsSync(assetsDir)) {
+  for (const f of fs.readdirSync(assetsDir)) {
+    if (f.endsWith('.js')) {
+      const content = fs.readFileSync(path.join(assetsDir, f), 'utf8');
+      if (content.includes('sachin-crackers')) {
+        fail(`Detected leftover project reference 'sachin-crackers' in dist/assets/${f}`);
+      }
+      if (content.includes('IEI#MasterAdmin') || content.includes('IEI#StaffCoord')) {
+        fail(`Detected hardcoded plain-text credentials in dist/assets/${f}`);
+      }
+    }
+  }
+}
+console.log('  [OK] Compiled frontend assets are 100% free of credentials and third-party references.');
+
+// 5. Verify total package size
 let totalBytes = 0;
 let fileCount = 0;
 function walk(dir) {
@@ -102,14 +158,14 @@ walk(DIST);
 const sizeMB = (totalBytes / (1024 * 1024)).toFixed(2);
 console.log(`  [OK] 100% Hostinger bundle verified: ${fileCount} files (${sizeMB} MB total)`);
 
-// 4. Verify .htaccess contains HTTPS redirect, API bypass, and SPA fallback
+// 6. Verify .htaccess contains HTTPS redirect, API bypass, and SPA fallback
 const htaccess = fs.readFileSync(path.join(DIST, '.htaccess'), 'utf8');
 if (!htaccess.includes('RewriteRule ^api(/|$) - [L,NC]') || !htaccess.includes('RewriteRule ^ index.html [L]')) {
   fail('dist/.htaccess is missing PHP API bypass or SPA fallback rules.');
 }
 console.log('  [OK] dist/.htaccess verified (HTTPS, PHP /api & /uploads bypass, SPA fallback, security headers)');
 
-// 5. Create hostinger-deploy-package.zip (includes all .htaccess dotfiles!)
+// 7. Create hostinger-deploy-package.zip (includes all .htaccess dotfiles!)
 try {
   if (fs.existsSync(ZIP_OUTPUT)) fs.unlinkSync(ZIP_OUTPUT);
   if (process.platform === 'win32') {

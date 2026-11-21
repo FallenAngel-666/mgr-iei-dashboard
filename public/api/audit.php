@@ -30,7 +30,8 @@ if ($method === 'GET') {
     }
 
     $limit = min(2000, max(1, (int)($_GET['limit'] ?? 500)));
-    $stmt = $pdo->prepare("SELECT data_json FROM system_audit_logs ORDER BY created_at DESC LIMIT {$limit}");
+    $stmt = $pdo->prepare("SELECT data_json FROM system_audit_logs ORDER BY created_at DESC LIMIT ?");
+    $stmt->bindValue(1, $limit, PDO::PARAM_INT);
     $stmt->execute();
 
     $logs = [];

@@ -8,9 +8,9 @@
 
 The web platform is currently live and deployed globally on Google Firebase Hosting with high-availability CDN caching and security headers:
 
-- **Primary Production URL:** [https://sachin-crackers-smartpos-81c6a.web.app](https://sachin-crackers-smartpos-81c6a.web.app)
-- **Secondary Production URL:** [https://sachin-crackers-smartpos-81c6a.firebaseapp.com](https://sachin-crackers-smartpos-81c6a.firebaseapp.com)
-- **Google Firebase Console:** [https://console.firebase.google.com/project/sachin-crackers-smartpos-81c6a/overview](https://console.firebase.google.com/project/sachin-crackers-smartpos-81c6a/overview)
+- **Primary Production URL:** [https://mgr-iei-dashboard.web.app](https://mgr-iei-dashboard.web.app)
+- **Secondary Production URL:** [https://mgr-iei-dashboard.firebaseapp.com](https://mgr-iei-dashboard.firebaseapp.com)
+- **Google Firebase Console:** [https://console.firebase.google.com/project/mgr-iei-dashboard/overview](https://console.firebase.google.com/project/mgr-iei-dashboard/overview)
 
 ---
 
@@ -18,7 +18,7 @@ The web platform is currently live and deployed globally on Google Firebase Host
 
 | Target Platform | Package / Binary | Path | Status |
 |---|---|---|---|
-| **Live Web App** | Firebase Hosting CDN | `https://sachin-crackers-smartpos-81c6a.web.app` | **LIVE (HTTP 200)** |
+| **Live Web App** | Firebase Hosting CDN | `https://mgr-iei-dashboard.web.app` | **LIVE (HTTP 200)** |
 | **Windows Desktop (Portable)** | `mgr-iei-windows-app.exe` | [`mgr-iei-windows-app.exe`](file:///C:/Users/Sripriyan/.gemini/antigravity/scratch/mgr-iei-platform/mgr-iei-windows-app.exe) | **COMPILED (106 MB)** |
 | **Windows Desktop (Direct)** | `MGR IEI Student Chapter.exe` | [`win-unpacked/MGR IEI Student Chapter.exe`](file:///C:/Users/Sripriyan/.gemini/antigravity/scratch/mgr-iei-platform/release/win-unpacked/MGR%20IEI%20Student%20Chapter.exe) | **COMPILED (249 MB)** |
 | **Android Mobile** | `mgr-iei-app-debug.apk` | [`mgr-iei-app-debug.apk`](file:///C:/Users/Sripriyan/.gemini/antigravity/scratch/mgr-iei-platform/mgr-iei-app-debug.apk) | **COMPILED (9.88 MB)** |
@@ -85,9 +85,9 @@ The repository includes pre-configured settings for standard institutional cloud
 Environment templates are stored in `.env.example` and `.env.production`:
 ```env
 VITE_FIREBASE_API_KEY=AIzaSyCddFLGz2TjRGmpg8cNcWrm-rtYmNNXvXE
-VITE_FIREBASE_AUTH_DOMAIN=sachin-crackers-smartpos-81c6a.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=sachin-crackers-smartpos-81c6a
-VITE_FIREBASE_STORAGE_BUCKET=sachin-crackers-smartpos-81c6a.firebasestorage.app
+VITE_FIREBASE_AUTH_DOMAIN=mgr-iei-dashboard.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=mgr-iei-dashboard
+VITE_FIREBASE_STORAGE_BUCKET=mgr-iei-dashboard.firebasestorage.app
 VITE_FIREBASE_MESSAGING_SENDER_ID=143073801647
 VITE_FIREBASE_APP_ID=1:143073801647:web:e75f4300893c55b39a6b5a
 VITE_FIREBASE_MEASUREMENT_ID=G-3R5NMW0K39
@@ -95,7 +95,7 @@ VITE_FIREBASE_MEASUREMENT_ID=G-3R5NMW0K39
 
 ### Cloud Storage Note
 To enable file attachment uploads (PDFs, photos for community posts & reports) in production Firebase Storage:
-1. Open the [Firebase Storage Console](https://console.firebase.google.com/project/sachin-crackers-smartpos-81c6a/storage).
+1. Open the [Firebase Storage Console](https://console.firebase.google.com/project/mgr-iei-dashboard/storage).
 2. Click **Get Started** and select default location.
 3. Deploy storage security rules via:
    ```bash

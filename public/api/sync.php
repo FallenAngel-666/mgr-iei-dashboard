@@ -28,6 +28,7 @@ $ALLOWED_TABLES = [
     'certificates'  => 'iei_certificates',
     'achievements'  => 'iei_achievements',
     'notifications' => 'iei_notifications',
+    'settings'      => 'iei_system_settings',
 ];
 
 $metaRows = $pdo->query('SELECT collection_name, version FROM iei_sync_meta')->fetchAll();

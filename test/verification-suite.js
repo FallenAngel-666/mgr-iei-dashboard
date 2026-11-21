@@ -206,12 +206,12 @@ async function runTestSuite() {
     assert.ok(!loadedMembers.some((m) => m.name.toLowerCase().includes('senthil')), 'No Senthil Kumar exists');
   });
 
-  test('Chairman Sriman has official username sriman.chair-01 and strong password', () => {
+  test('Chairman Sriman has official username sriman.chair-01 and passwords are never exposed in client records', () => {
     const sriman = loadedMembers.find((m) => m.name.includes('SRIMAN'));
     assert.ok(sriman, 'Sriman should exist');
     assert.strictEqual(sriman.username, 'sriman.chair-01');
     assert.strictEqual(sriman.role, ROLES.CHAIRMAN);
-    assert.ok(sriman.password && sriman.password.length >= 8);
+    assert.strictEqual(sriman.password, undefined, 'Client records must never expose plaintext passwords');
   });
 
   test('Joint Secretary Sri Priyan has official username sripriyan.jsec-01', () => {

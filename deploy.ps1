@@ -34,6 +34,6 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "======================================================================" -ForegroundColor Green
 Write-Host "   DEPLOYMENT SUCCESSFUL!" -ForegroundColor Green
-Write-Host "   Live URL:        https://sachin-crackers-smartpos-81c6a.web.app" -ForegroundColor Green
-Write-Host "   Alternative URL: https://sachin-crackers-smartpos-81c6a.firebaseapp.com" -ForegroundColor Green
+Write-Host "   Live URL:        https://mgr-iei-dashboard.web.app" -ForegroundColor Green
+Write-Host "   Alternative URL: https://mgr-iei-dashboard.firebaseapp.com" -ForegroundColor Green
 Write-Host "======================================================================" -ForegroundColor Green

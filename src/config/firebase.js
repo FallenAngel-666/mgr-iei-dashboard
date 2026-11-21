@@ -31,25 +31,30 @@ import {
 } from 'firebase/storage';
 
 const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : (typeof process !== 'undefined' ? process.env : {});
+const isHostinger = String(env.VITE_BACKEND_MODE || '').toLowerCase() === 'hostinger';
 
-// Firebase configuration using environment variables with institutional fallback
+// Firebase configuration using explicit environment variables only (zero hardcoded third-party fallbacks)
 const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY || "AIzaSyCddFLGz2TjRGmpg8cNcWrm-rtYmNNXvXE",
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || "sachin-crackers-smartpos-81c6a.firebaseapp.com",
-  projectId: env.VITE_FIREBASE_PROJECT_ID || "sachin-crackers-smartpos-81c6a",
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || "sachin-crackers-smartpos-81c6a.firebasestorage.app",
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "143073801647",
-  appId: env.VITE_FIREBASE_APP_ID || "1:143073801647:web:e75f4300893c55b39a6b5a",
-  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || "G-3R5NMW0K39"
+  apiKey: env.VITE_FIREBASE_API_KEY || "",
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: env.VITE_FIREBASE_APP_ID || "",
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
 
-// Initialize Firebase App
-export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const hasValidConfig = Boolean(firebaseConfig.projectId && firebaseConfig.apiKey && !isHostinger);
 
-// Initialize Firebase Services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+// Initialize Firebase App only when explicitly configured and not running in pure Hostinger mode
+export const app = hasValidConfig 
+  ? (!getApps().length ? initializeApp(firebaseConfig) : getApp())
+  : null;
+
+// Initialize Firebase Services safely
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
+export const storage = app ? getStorage(app) : null;
 
 export {
   signInWithEmailAndPassword,

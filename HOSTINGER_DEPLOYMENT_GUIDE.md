@@ -1,161 +1,138 @@
-# 100% HOSTINGER PRODUCTION DEPLOYMENT GUIDE
-**Project:** IEI MGR STUDENTS CHAPTER (`IEI DASHBOARD SYSTEM`)  
-**Institution:** Dr. M.G.R. Educational and Research Institute (Deemed to be University)  
-**Official IEI Mail:** `iei@drmgrdu.ac.in`
+# Hostinger Production Deployment Guide — IEI MGR Students Chapter
+
+This guide provides simple, step-by-step instructions for deploying the **IEI MGR Students Chapter Dashboard** on **Hostinger Unlimited / Business Web Hosting**.
 
 ---
 
-## 1. Hostinger Compatibility Audit Report (100% Hostinger Architecture)
+## Prerequisites
 
-This application is engineered to run **100% natively on Hostinger** with **zero Firebase dependency and zero external database/storage fees** — even with **1,500+ registered student members**:
-
-| Layer | Technology | Hostinger Native Component |
-| :--- | :--- | :--- |
-| **Frontend** | React 18.3 + Vite 5.2 + Tailwind CSS (Multi-page Public Portal + Dashboard) | Static SPA served via LiteSpeed (`public_html/`) |
-| **Backend API** | Zero-dependency PHP 8.x REST API (`public_html/api/*.php`) | Native Hostinger PHP 8.1 / 8.2 / 8.3 (no Composer needed) |
-| **Database** | **Hostinger MySQL 8 / MariaDB** (14 indexed tables in `database/schema.sql`) | Native Hostinger MySQL + phpMyAdmin |
-| **File & Image Storage** | **Hostinger NVMe Disk (`/uploads/`) + MySQL `iei_uploads` table** | Native Hostinger storage (100–200 GB included) with `php_flag engine off` |
-| **Real-Time Multi-User Sync** | Lightweight 4-second version-delta polling (`/api/sync.php` via `iei_sync_meta`) | Near-zero MySQL load; automatic live updates without browser refresh |
-| **Audit Console Security** | Append-only `system_audit_logs` + optional MySQL triggers + server RBAC | Strictly restricted to CBN Joint Secretary & Master Administrator |
-
-### Compatible Hostinger Plans
-* **Hostinger Premium / Business Web Hosting (Shared — Recommended):** 100% compatible out of the box (PHP 8.2 + MySQL + LiteSpeed + Free SSL + 100–200 GB NVMe storage).
-* **Hostinger Cloud Startup / Cloud Professional:** 100% compatible with dedicated resources.
-* **Hostinger VPS:** 100% compatible (Apache/LiteSpeed or Nginx + PHP-FPM + MySQL).
-
-> **Important Exclusion:** Do **not** upload `electron/`, `android/`, `release/`, `backups/`, or `*.apk` to Hostinger `public_html`. Only upload `hostinger-deploy-package.zip` (generated from `dist/`).
+Before starting, ensure you have:
+1. An active **Hostinger Web Hosting account** (Business Web Hosting or Premium Web Hosting).
+2. A purchased domain connected to your Hostinger account (e.g. `ieidrmgrdu.ac.in` or `mgr-iei.com`).
+3. The production deployment file: **`hostinger-deploy-package.zip`** (located in this project root).
 
 ---
 
-## 2. Step-by-Step Hostinger Deployment Instructions
+## 4-Step Deployment Walkthrough
 
-### Step A: Generate the Hostinger Package & MySQL Seed File Locally
-Run these two commands in the project workspace:
-```bash
-npm run migrate:mysql
-npm run build:hostinger
 ```
-This produces:
-1. **`database/schema.sql`** — All 14 MySQL tables + composite indexes for 1,500+ members.
-2. **`database/seed-from-firestore.sql`** — All 23 official committee accounts + Public Welcome Profile (Mentor Dr. L. Ramesh, Faculty Advisor Dr. Anthony Xavier, `iei@drmgrdu.ac.in`, gallery config).
-3. **`hostinger-deploy-package.zip`** — Complete production frontend + PHP 8 `/api/` + hardened `.htaccess` + `/uploads/.htaccess` (with **zero secrets** inside).
-
----
-
-### Step B: Create & Import Your Hostinger MySQL Database
-1. Log in to **Hostinger hPanel** → **Websites** → **Manage** → **Databases** → **Management**.
-2. Create a new MySQL database:
-   * **Database Name** (e.g., `u123456789_iei_mgr`)
-   * **Username** (e.g., `u123456789_iei_user`)
-   * **Strong Password** (save this securely!)
-3. Click **Enter phpMyAdmin** next to your new database.
-4. Click the **Import** tab → upload **`database/schema.sql`** → click **Import** (creates all 14 tables cleanly).
-5. Click **Import** again → upload **`database/seed-from-firestore.sql`** → click **Import** (loads all 23 official accounts + public profile).
-6. *(Optional Extra SQL-Level Audit Lock)* Import **`database/immutability_triggers.sql`** if your Hostinger MySQL user grants `TRIGGER` privilege (PHP API already enforces strict append-only immutability either way).
-
----
-
-### Step C: Upload & Extract Application Files to `public_html`
-1. In **Hostinger hPanel** → **Files** → **File Manager** → open **`public_html/`**.
-2. Delete Hostinger's placeholder `default.php` if present.
-3. Click **Upload** → **File** → upload **`hostinger-deploy-package.zip`**.
-4. Right-click `hostinger-deploy-package.zip` → **Extract** → enter `.` (directly into `public_html/`).
-5. Delete `hostinger-deploy-package.zip` after extraction.
-6. Confirm `public_html/` contains:
-   * `index.html`
-   * `.htaccess`
-   * `manifest.webmanifest`
-   * `assets/`
-   * `api/` (`auth.php`, `data.php`, `sync.php`, `public.php`, `audit.php`, `upload.php`, `health.php`, `bootstrap.php`, `config.example.php`, `.htaccess`)
-   * `uploads/` (`.htaccess`) — verify folder permission is **`755`** so PHP can save uploaded photos/posters.
-
----
-
-### Step D: Configure Server Credentials (`public_html/api/config.php`)
-1. Inside Hostinger File Manager, open **`public_html/api/`**.
-2. Copy **`config.example.php`** to **`config.php`** (note: `api/.htaccess` strictly denies HTTP access to `config.php`).
-3. Edit **`public_html/api/config.php`** and fill in:
-   * `'DB_HOST' => 'localhost'`
-   * `'DB_NAME' => '<your_hostinger_db_name>'`
-   * `'DB_USER' => '<your_hostinger_db_user>'`
-   * `'DB_PASS' => '<your_hostinger_db_password>'`
-   * `'APP_SECRET' => '<64-character random hex string>'`
-   * `'ALLOWED_ORIGINS' => ['https://your-domain.com', 'https://www.your-domain.com']`
-4. Verify PHP version in **hPanel → Advanced → PHP Configuration** is **PHP 8.1, 8.2, or 8.3** with `pdo_mysql` and `fileinfo` extensions enabled (enabled by default on Hostinger).
-
----
-
-### Step E: Verify Live Backend & Storage Health
-Open in your browser:
-```
-https://your-domain.com/api/health.php
-```
-You should receive JSON confirming:
-```json
-{
-  "ok": true,
-  "backend": "hostinger-mysql-php8",
-  "databaseConnected": true,
-  "ieiTablesCount": 13,
-  "membersCount": 23,
-  "storageWritable": true
-}
++-----------------------------------------------------------------------------------------+
+| STEP 1: Upload Files         STEP 2: Create Database       STEP 3: Configure Database    |
+| Upload & Extract ZIP      -> Create MySQL DB in         -> Rename config.example.php     |
+| into public_html             phpMyAdmin & import SQL       to config.php & enter DB info|
++-----------------------------------------------------------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------------+
+| STEP 4: First Admin Setup                                                               |
+| Visit /api/setup.php in browser, create Master Administrator account, and launch!       |
++-----------------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 3. Required Environment Variables
-
-See `.env.example` (zero real credentials committed):
-* `VITE_BACKEND_MODE=hostinger` (set automatically by `npm run build:hostinger`)
-* `VITE_API_BASE_URL=/api`
-* `VITE_APP_URL=` *(optional: `https://your-domain.com`, auto-detects `window.location.origin` if blank)*
-* `VITE_APP_ENV=production`
-* `VITE_ENABLE_ERROR_LOGGING=true`
-
----
-
-## 4. Custom Domain DNS & SSL Activation
-
-### DNS Configuration
-* **Hostinger Domain:** Verify `A` record (`@` → Hostinger IPv4) and `CNAME` (`www` → `your-domain.com`) in **hPanel → Domains → DNS / Nameservers**.
-* **External Registrar:** Point nameservers to `ns1.dns-parking.com` and `ns2.dns-parking.com` (or configure `A` and `CNAME` manually).
-* **www vs non-www:** Open `public_html/.htaccess` and uncomment Option A (`www` → `non-www`, recommended) or Option B (`non-www` → `www`).
-
-### SSL Activation
-1. Open **Hostinger hPanel → Security → SSL**.
-2. Click **Install SSL** (Free Lifetime Let's Encrypt SSL) on your purchased domain.
-3. Once status shows **Active**, HTTP requests automatically redirect (`301`) to HTTPS via `public_html/.htaccess`.
+### Step 1: Upload & Extract Application Files
+1. Log in to **Hostinger hPanel** at [hpanel.hostinger.com](https://hpanel.hostinger.com).
+2. Under **Websites**, click **Manage** next to your domain.
+3. In the left menu, click **File Manager** (or navigate to **Files** $\rightarrow$ **File Manager**).
+4. Click on **`public_html`**.
+5. Click the **Upload** icon (upward arrow in top-right corner) and choose **File**.
+6. Select **`hostinger-deploy-package.zip`** from your computer.
+7. Once uploaded, right-click `hostinger-deploy-package.zip` and select **Extract**.
+8. Set destination directory to `public_html` and click **Extract**.
+   - *After extraction, you should see `index.html`, `.htaccess`, `assets/`, `api/`, `database/`, and `uploads/` in `public_html`.*
+9. (Optional) Delete the `hostinger-deploy-package.zip` file to save disk space.
 
 ---
 
-## 5. Backup & Disaster Recovery (Hostinger MySQL + Storage)
-
-1. **Automated Hostinger Backups:** Hostinger automatically creates weekly (Premium) or daily (Business/Cloud) backups of both **Files (`public_html` + `uploads/`)** and **MySQL Databases** under **hPanel → Files → Backups**.
-2. **Manual MySQL Backup:** Open **hPanel → Databases → phpMyAdmin** → select your database → **Export** → Quick / SQL → save locally or to encrypted institutional Google Drive.
-3. **Manual Restore:** Open **phpMyAdmin → Import** → select your `.sql` backup file.
-4. **Uploaded Files Backup:** Download `public_html/uploads/` periodically via Hostinger File Manager or SFTP.
+### Step 2: Create MySQL Database & Import Tables
+1. In hPanel, go to **Databases** $\rightarrow$ **Management**.
+2. Under **Create a New MySQL Database and Database User**:
+   - **Database Name**: e.g., `u123456789_iei_db`
+   - **Username**: e.g., `u123456789_iei_user`
+   - **Password**: Enter a strong password (copy and save this password!).
+3. Click **Create**.
+4. Scroll down to your newly created database and click **Enter phpMyAdmin**.
+5. Inside phpMyAdmin:
+   - Click your database name in the left sidebar.
+   - Click the **Import** tab at the top.
+   - Click **Choose File** $\rightarrow$ navigate into the extracted `database/` folder and select **`schema.sql`**.
+   - Click **Import** (or **Go**) at the bottom.
+     *(This creates all 16 required tables).*
+   - Click the **Import** tab again $\rightarrow$ choose **`database/seed.sql`** $\rightarrow$ Click **Import**.
+     *(This seeds initial system rules, collection versions, and public profile).*
 
 ---
 
-## 6. Security Highlights
+### Step 3: Configure Database Connection
+1. In **File Manager**, navigate into `public_html/api/`.
+2. Find `config.example.php`.
+3. Right-click `config.example.php` and click **Rename** (or **Copy**) to **`config.php`**.
+4. Double-click `config.php` to edit it:
+   ```php
+   return [
+       'DB_HOST' => 'localhost',
+       'DB_PORT' => '3306',
+       'DB_NAME' => 'u123456789_iei_db',        // Your Hostinger DB Name from Step 2
+       'DB_USER' => 'u123456789_iei_user',      // Your Hostinger DB Username from Step 2
+       'DB_PASS' => 'YOUR_DB_PASSWORD',         // Your Hostinger DB Password from Step 2
 
-* **Passwords:** Verified with PHP `password_verify()` and automatically upgraded to **bcrypt** (`PASSWORD_BCRYPT`) on first login; passwords are NEVER returned to public visitors or non-authorized users.
-* **Server-Side RBAC:** Enforced directly in PHP (`bootstrap.php`, `data.php`, `public.php`, `audit.php`) — non-authorized requests to the **System Activity Console** receive HTTP `403 Forbidden` and trigger a `SECURITY_ACCESS_DENIED` audit log.
-* **Hardened File Uploads:** `upload.php` inspects real magic bytes (`finfo_file`), rejects non-whitelisted types, assigns random filenames, logs uploads in MySQL `iei_uploads`, and `uploads/.htaccess` disables PHP execution (`php_flag engine off`).
-* **SQL Injection Protection:** 100% PDO prepared statements with `ATTR_EMULATE_PREPARES => false`.
+       // Generate a random string of 64 characters for signing user session tokens:
+       'APP_SECRET' => 'a9f8b472e391d846c501938472918475a827461938472918475a827461938472',
+
+       'ALLOWED_ORIGINS' => [
+           'https://yourdomain.com',
+           'https://www.yourdomain.com'
+       ],
+       'MAX_UPLOAD_BYTES' => 10 * 1024 * 1024,
+       'SESSION_TTL_SECONDS' => 7 * 24 * 60 * 60,
+   ];
+   ```
+5. Click **Save & Close**.
 
 ---
 
-## 7. Manual Configuration Checklist (After Purchasing Your Domain & Hostinger Plan)
+### Step 4: One-Time Master Administrator Setup
+1. Open your web browser and navigate to:
+   ```text
+   https://yourdomain.com/api/setup.php
+   ```
+2. You will see the **IEI Master Administrator Setup** page.
+3. Fill in the form:
+   - **Administrator Full Name**: e.g., `Master Administrator`
+   - **Master Username**: e.g., `admin.master-01`
+   - **Official Chapter Email**: `iei@drmgrdu.ac.in`
+   - **Master Password**: Enter your strong administrative password (minimum 12 characters, uppercase, lowercase, numbers, and special symbols).
+4. Click **Initialize Master Administrator & Lock Setup**.
+   - *The administrator is created with bcrypt hashing.*
+   - *A security lockfile `.installed` is written.*
+   - *The setup page is permanently locked against any future executions.*
+5. Click **Proceed to Login** and log in with your credentials at `https://yourdomain.com/#/login`!
 
-1. [ ] Purchase your custom domain and Hostinger Web Hosting plan (Premium or Business).
-2. [ ] Create a MySQL database & user in Hostinger hPanel → Databases.
-3. [ ] Import `database/schema.sql` and `database/seed-from-firestore.sql` via phpMyAdmin.
-4. [ ] Upload & extract `hostinger-deploy-package.zip` directly into `public_html/`.
-5. [ ] Copy `public_html/api/config.example.php` → `public_html/api/config.php` and enter your MySQL credentials + 64-char random `APP_SECRET`.
-6. [ ] Verify `public_html/uploads/` folder permissions are `755`.
-7. [ ] Uncomment your preferred `www` or non-`www` rule in `public_html/.htaccess`.
-8. [ ] Configure DNS records & install Free SSL in Hostinger hPanel → Security → SSL.
-9. [ ] Verify `https://your-domain.com/api/health.php` returns `"ok": true, "databaseConnected": true, "storageWritable": true`.
-10. [ ] Sign in as Master Administrator (`admin.master-01`) and Staff Coordinator (`staff.login`) and rotate default passwords.
+---
+
+## Verifying Your Installation
+
+Visit the automated verification endpoint:
+```text
+https://yourdomain.com/api/verify.php
+```
+Verify that all checks return `[PASS]` and status is `READY FOR PRODUCTION`.
+
+---
+
+## Frequently Asked Questions (FAQ)
+
+### 1. Does this deployment require a VPS or Node.js running on the server?
+**No.** The application is 100% pre-compiled static HTML/JavaScript/CSS and native PHP 8 REST APIs. It runs on standard Hostinger Web Hosting without needing Node.js processes, daemons, or root access.
+
+### 2. How do student members register or get access?
+The Master Administrator can log in to the dashboard, navigate to **Members Directory**, and click **Add New Member**. The system automatically generates the official institutional username and temporary password.
+
+### 3. How does the weekly submission restriction work?
+Inside the **Dashboard & Weekly** view, the Master Administrator has an ON/OFF toggle card.
+- **ON**: Students can only submit reports for dates within the current week (Monday–Sunday, `Asia/Kolkata` timezone).
+- **OFF**: Students can submit historical reports for any previous date.
+
+### 4. How are files and photos stored?
+All photos, certificates, and work reports uploaded by students are validated via PHP `finfo`, assigned randomized filenames, and stored securely on Hostinger disk storage inside `public_html/uploads/`. Direct execution of scripts inside `uploads/` is strictly blocked by `uploads/.htaccess`.

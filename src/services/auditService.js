@@ -179,7 +179,7 @@ if (typeof window !== 'undefined') {
         refreshHostingerAuditLogs();
       }
     }, 6000);
-  } else {
+  } else if (db) {
     try {
       const auditCol = collection(db, 'system_audit_logs');
       onSnapshot(auditCol, (snapshot) => {
@@ -247,7 +247,7 @@ export async function recordActivity({
   try {
     if (isHostingerBackend()) {
       await hostingerAppendAudit(auditEntry);
-    } else {
+    } else if (db) {
       const docRef = doc(db, 'system_audit_logs', id);
       await setDoc(docRef, auditEntry);
     }

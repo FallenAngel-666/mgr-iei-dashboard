@@ -1,7 +1,7 @@
 # ==============================================================================
-# IEI MGR STUDENTS CHAPTER — PROTECTED API DIRECTORY RULES (HOSTINGER LITESPEED)
+# IEI MGR STUDENTS CHAPTER — PROTECTED API DIRECTORY RULES (HOSTINGER LITESPEED / APACHE)
 # ==============================================================================
-Options -Indexes
+Options -Indexes -ExecCGI
 
 # Forward Authorization header cleanly to PHP on Hostinger LiteSpeed/FastCGI
 <IfModule mod_rewrite.c>
@@ -10,8 +10,19 @@ Options -Indexes
   RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 </IfModule>
 
-# Strictly deny direct HTTP access to server configuration & internal helpers
-<FilesMatch "^(config\.php|config\.example\.php|bootstrap\.php)$">
+# Strictly deny direct HTTP access to configuration, lockfiles, internal scripts, and logs
+<FilesMatch "^(config\.php|config\.example\.php|bootstrap\.php|\.installed|\.env|.*\.sql|.*\.log|.*\.bak)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Block all hidden dotfiles (.installed, .git, etc.)
+<FilesMatch "^\.">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -24,4 +35,5 @@ Options -Indexes
 <IfModule mod_headers.c>
   Header always set Cache-Control "no-store, no-cache, must-revalidate"
   Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
 </IfModule>

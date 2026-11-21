@@ -153,8 +153,8 @@ export function AuthProvider({ children }) {
         return { success: true, user: matched };
       }
 
-      // Fallback: Try Firebase Auth directly if email format
-      if (cleanIdentifier.includes('@')) {
+      // Fallback: Try Firebase Auth directly if email format and Firebase is active
+      if (auth && cleanIdentifier.includes('@')) {
         try {
           const cred = await signInWithEmailAndPassword(auth, cleanIdentifier, cleanPassword);
           const fbUser = {

@@ -72,6 +72,6 @@ jobs:
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          projectId: sachin-crackers-smartpos-81c6a
+          projectId: mgr-iei-dashboard
           channelId: live
         continue-on-error: true

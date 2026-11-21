@@ -1,7 +1,7 @@
 # Institution of Engineers (India) — MGR Student Chapter
 ### Official Committee Member Credentials & Login Register
 **Dr. M.G.R. Educational and Research Institute (Deemed to be University)**  
-*Live Portal URL:* [https://sachin-crackers-smartpos-81c6a.web.app](https://sachin-crackers-smartpos-81c6a.web.app)
+*Live Portal URL:* [https://mgr-iei-dashboard.web.app](https://mgr-iei-dashboard.web.app)
 
 ---
 
