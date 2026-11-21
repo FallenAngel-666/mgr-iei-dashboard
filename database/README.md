@@ -8,7 +8,7 @@ This directory contains the complete MySQL 8.0+ / MariaDB 10.6+ database schema 
 
 | File | Purpose |
 | :--- | :--- |
-| **`schema.sql`** | Complete MySQL schema creating all 16 required tables with indexes. |
+| **`schema.sql`** | Complete MySQL schema creating all 17 required tables with indexes. |
 | **`seed.sql`** | Essential initial configuration data (collection versions, public profile, weekly restriction rules). Zero hardcoded passwords. Zero fake students. |
 | **`verify.php`** | Automated verification utility to check database connectivity, table integrity, and storage permissions. |
 | **`immutability_triggers.sql`** | Optional MySQL engine-level triggers preventing updates/deletes on `system_audit_logs`. |
@@ -35,7 +35,7 @@ This directory contains the complete MySQL 8.0+ / MariaDB 10.6+ database schema 
 3. Click the **Import** tab in the top navigation bar.
 4. Click **Choose File** $\rightarrow$ select **`database/schema.sql`**.
 5. Leave all format settings as default (UTF-8, SQL) and click **Import** (or **Go**) at the bottom.
-   - *Result: All 16 tables will be created.*
+   - *Result: All 17 tables will be created.*
 6. Click the **Import** tab again $\rightarrow$ choose **`database/seed.sql`** $\rightarrow$ click **Import**.
    - *Result: Essential metadata, public profile, and system rules will be seeded.*
 

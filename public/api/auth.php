@@ -41,19 +41,43 @@ if ($method === 'GET' && $action === 'me') {
 // POST ?action=logout — Terminate active session and record audit trail
 // ----------------------------------------------------------------------------
 if ($method === 'POST' && $action === 'logout') {
+    $token = getBearerToken();
     $user = getAuthenticatedUser($pdo);
+
+    // 1. Invalidate Bearer Token via MySQL Token Revocation Blacklist
+    if ($token !== null) {
+        $tokenHash = hash('sha256', $token);
+        $parts = explode('.', $token);
+        $exp = time() + 604800;
+        if (count($parts) === 3) {
+            $claims = json_decode(base64UrlDecode($parts[1]), true);
+            if (is_array($claims) && !empty($claims['exp'])) {
+                $exp = (int)$claims['exp'];
+            }
+        }
+        try {
+            $pdo->prepare('INSERT IGNORE INTO iei_revoked_tokens (token_hash, expires_at) VALUES (?, ?)')
+                ->execute([$tokenHash, $exp]);
+            // Clean up old expired revoked tokens
+            $pdo->prepare('DELETE FROM iei_revoked_tokens WHERE expires_at < ?')->execute([time()]);
+        } catch (Throwable $e) {
+            error_log('[IEI LOGOUT TOKEN REVOCATION NOTICE] ' . $e->getMessage());
+        }
+    }
+
+    // 2. Append Audit Log
     if ($user) {
         appendAuditLog($pdo, [
             'actor' => $user,
             'action' => 'AUTH_LOGOUT',
             'module' => 'AUTH',
             'status' => 'SUCCESS',
-            'details' => "User {$user['name']} (@{$user['username']}) signed out of the portal.",
+            'details' => "User {$user['name']} (@{$user['username']}) signed out of the portal. Token revoked and session destroyed.",
             'targetId' => $user['id'],
         ]);
     }
 
-    // Invalidate PHP Session & Cookies
+    // 3. Invalidate PHP Session & Cookies
     $_SESSION = [];
     if (ini_get("session.use_cookies")) {
         $params = session_get_cookie_params();
@@ -67,9 +91,11 @@ if ($method === 'POST' && $action === 'logout') {
             $params["httponly"]
         );
     }
-    session_destroy();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
 
-    sendJson(['ok' => true]);
+    sendJson(['ok' => true, 'message' => 'Signed out successfully. Token revoked.']);
 }
 
 // ----------------------------------------------------------------------------

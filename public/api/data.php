@@ -70,7 +70,16 @@ if ($method === 'POST' || $method === 'PUT') {
     }
     $data['id'] = $docId;
 
-    // Server-side RBAC check for members creation/edit
+    // Fetch existing record if present
+    $existingRow = null;
+    $sel = $pdo->prepare("SELECT * FROM `{$table}` WHERE id = ? LIMIT 1");
+    $sel->execute([$docId]);
+    $existingRow = $sel->fetch() ?: null;
+    $existingData = $existingRow ? (json_decode((string)$existingRow['data_json'], true) ?: []) : [];
+
+    // ========================================================================
+    // SERVER-SIDE RBAC AUTHORIZATION CHECKS (POST / PUT)
+    // ========================================================================
     if ($collection === 'members') {
         $isSelfEdit = ($docId === ($user['id'] ?? ''));
         if (!$isSelfEdit && !canAccessMembersDirectory($user)) {
@@ -79,30 +88,174 @@ if ($method === 'POST' || $method === 'PUT') {
                 'action' => 'SECURITY_ACCESS_DENIED',
                 'module' => 'MEMBERS',
                 'status' => 'DENIED',
-                'details' => "Unauthorized attempt to modify member {$docId} by @{$user['username']}.",
+                'details' => "Unauthorized attempt to create or modify member {$docId} by @{$user['username']}.",
                 'targetId' => $docId,
             ]);
             sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized directory managers or Master Administrator can modify other members.'], 403);
         }
+
+        // Only Master Administrator can grant, modify, or revoke Administrator privileges
+        $targetIsAdmin = !empty($existingRow['is_master_admin']) || ($existingRow['role'] ?? '') === 'Administrator';
+        $requestedAdmin = !empty($data['isMasterAdmin']) || ($data['role'] ?? '') === 'Administrator';
+        if (($targetIsAdmin || $requestedAdmin) && !isMasterAdmin($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'MEMBERS',
+                'status' => 'DENIED',
+                'details' => "Non-master user @{$user['username']} attempted to create or alter an Administrator account.",
+                'targetId' => $docId,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only the Master Administrator can grant or modify Administrator privileges.'], 403);
+        }
+
+        // Prevent self-privilege escalation
+        if ($isSelfEdit && !isMasterAdmin($user)) {
+            $data['role'] = $existingRow['role'] ?? $user['role'];
+            $data['status'] = $existingRow['status'] ?? $user['status'];
+            $data['isMasterAdmin'] = !empty($existingRow['is_master_admin']);
+            $data['membershipId'] = $existingData['membershipId'] ?? ($existingRow['membership_id'] ?? null);
+        }
+    } elseif ($collection === 'tasks') {
+        if (!$existingRow) {
+            // Creating a new task requires work assignment authority
+            if (!canAssignWork($user)) {
+                appendAuditLog($pdo, [
+                    'actor' => $user,
+                    'action' => 'SECURITY_ACCESS_DENIED',
+                    'module' => 'TASKS',
+                    'status' => 'DENIED',
+                    'details' => "Unauthorized work assignment attempt by student @{$user['username']}.",
+                    'targetId' => $docId,
+                ]);
+                sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers and coordinators can assign work.'], 403);
+            }
+        } else {
+            // Modifying an existing task
+            $assigneeId = (string)($existingData['assigneeId'] ?? ($existingRow['assignee_id'] ?? ''));
+            $isAssignee = ($assigneeId === ($user['id'] ?? ''));
+            $canAssign = canAssignWork($user);
+            $isApprover = isFirstLevelApprover($user) || isStaffCoordinator($user) || isMasterAdmin($user);
+
+            if (!$isAssignee && !$canAssign && !$isApprover) {
+                appendAuditLog($pdo, [
+                    'actor' => $user,
+                    'action' => 'SECURITY_ACCESS_DENIED',
+                    'module' => 'TASKS',
+                    'status' => 'DENIED',
+                    'details' => "Unauthorized attempt to modify task {$docId} by @{$user['username']}.",
+                    'targetId' => $docId,
+                ]);
+                sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'You can only view and update tasks assigned to your account.'], 403);
+            }
+
+            // Student assignee can update progress, duration, and submit, but CANNOT self-approve or reassign
+            if ($isAssignee && !$canAssign && !$isApprover) {
+                $requestedStatus = strtolower(trim((string)($data['status'] ?? ($existingRow['status'] ?? ''))));
+                if (in_array($requestedStatus, ['completed', 'approved'], true)) {
+                    appendAuditLog($pdo, [
+                        'actor' => $user,
+                        'action' => 'SECURITY_ACCESS_DENIED',
+                        'module' => 'TASKS',
+                        'status' => 'DENIED',
+                        'details' => "Student @{$user['username']} attempted to self-approve task {$docId}.",
+                        'targetId' => $docId,
+                    ]);
+                    sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Students cannot approve their own tasks or mark them as Completed.'], 403);
+                }
+                // Enforce immutable task assignment fields
+                $data['title'] = $existingData['title'] ?? $existingRow['title'];
+                $data['assigneeId'] = $assigneeId;
+                $data['assignedById'] = $existingData['assignedById'] ?? $existingRow['assigned_by_id'];
+            }
+        }
+    } elseif ($collection === 'events') {
+        if (!canManageEvents($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'EVENTS',
+                'status' => 'DENIED',
+                'details' => "Unauthorized attempt to schedule/modify event {$docId} by @{$user['username']}.",
+                'targetId' => $docId,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only chapter officers and coordinators can schedule or update events.'], 403);
+        }
+    } elseif ($collection === 'attendance') {
+        if (!canRecordAttendance($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'ATTENDANCE',
+                'status' => 'DENIED',
+                'details' => "Unauthorized attempt to record attendance for event {$docId} by @{$user['username']}.",
+                'targetId' => $docId,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can record or modify attendance.'], 403);
+        }
+    } elseif ($collection === 'announcements') {
+        if (!canManageAnnouncements($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'ANNOUNCEMENTS',
+                'status' => 'DENIED',
+                'details' => "Unauthorized attempt to publish announcement {$docId} by @{$user['username']}.",
+                'targetId' => $docId,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can publish or edit circulars and announcements.'], 403);
+        }
+    } elseif ($collection === 'certificates') {
+        if (!canManageCertificates($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'CERTIFICATES',
+                'status' => 'DENIED',
+                'details' => "Unauthorized attempt to manage certificate {$docId} by @{$user['username']}.",
+                'targetId' => $docId,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can manage certificates.'], 403);
+        }
+    } elseif ($collection === 'achievements') {
+        if (!canManageAchievements($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'ACHIEVEMENTS',
+                'status' => 'DENIED',
+                'details' => "Unauthorized attempt to manage achievement {$docId} by @{$user['username']}.",
+                'targetId' => $docId,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can manage achievements.'], 403);
+        }
+    } elseif ($collection === 'settings') {
+        if (!canManageSettings($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'SETTINGS',
+                'status' => 'DENIED',
+                'details' => "Non-master admin @{$user['username']} attempted to modify system settings.",
+                'targetId' => $docId,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only the Master Administrator can modify system settings.'], 403);
+        }
+    } elseif ($collection === 'updates') {
+        // Force author identity from server session (prevent author spoofing)
+        $data['authorId'] = $user['id'];
+        $data['authorName'] = $user['name'];
+        if (isset($data['author']) && is_array($data['author'])) {
+            $data['author']['id'] = $user['id'];
+            $data['author']['name'] = $user['name'];
+            $data['author']['role'] = $user['role'];
+        }
     }
 
     // Merge with existing record if requested
-    $existingRow = null;
-    $sel = $pdo->prepare("SELECT * FROM `{$table}` WHERE id = ? LIMIT 1");
-    $sel->execute([$docId]);
-    $existingRow = $sel->fetch() ?: null;
-
     if ($isMerge && $existingRow) {
-        $existingData = json_decode((string)$existingRow['data_json'], true) ?: [];
         $data = array_merge($existingData, $data);
         $data['id'] = $docId;
-    }
-
-    // Prevent non-admin users from escalating their own role via self-edit
-    if ($collection === 'members' && $existingRow && !isMasterAdmin($user) && !canAccessMembersDirectory($user)) {
-        $data['role'] = $existingRow['role'];
-        $data['status'] = $existingRow['status'];
-        $data['isMasterAdmin'] = (bool)$existingRow['is_master_admin'];
     }
 
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -279,16 +432,99 @@ if ($method === 'DELETE') {
         sendJson(['ok' => false, 'error' => 'MISSING_ID', 'message' => 'Document id is required.'], 400);
     }
 
-    if ($collection === 'members' && !canAccessMembersDirectory($user)) {
-        appendAuditLog($pdo, [
-            'actor' => $user,
-            'action' => 'SECURITY_ACCESS_DENIED',
-            'module' => 'MEMBERS',
-            'status' => 'DENIED',
-            'details' => "Unauthorized delete attempt on member {$id} by @{$user['username']}.",
-            'targetId' => $id,
-        ]);
-        sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Insufficient permissions to delete members.'], 403);
+    $existingRow = null;
+    $sel = $pdo->prepare("SELECT * FROM `{$table}` WHERE id = ? LIMIT 1");
+    $sel->execute([$id]);
+    $existingRow = $sel->fetch() ?: null;
+    if (!$existingRow) {
+        sendJson(['ok' => true, 'deletedId' => $id, 'version' => bumpSyncVersion($pdo, $collection)]);
+    }
+
+    // Server-side RBAC checks on DELETE
+    if ($collection === 'members') {
+        if (!canAccessMembersDirectory($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'MEMBERS',
+                'status' => 'DENIED',
+                'details' => "Unauthorized delete attempt on member {$id} by @{$user['username']}.",
+                'targetId' => $id,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Insufficient permissions to delete members.'], 403);
+        }
+        if ($id === ($user['id'] ?? '')) {
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'You cannot delete your own account.'], 403);
+        }
+        $targetIsAdmin = !empty($existingRow['is_master_admin']) || ($existingRow['role'] ?? '') === 'Administrator';
+        if ($targetIsAdmin && !isMasterAdmin($user)) {
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only Master Administrator can delete administrator accounts.'], 403);
+        }
+    } elseif ($collection === 'tasks') {
+        if (!canAssignWork($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'TASKS',
+                'status' => 'DENIED',
+                'details' => "Unauthorized delete attempt on task {$id} by student @{$user['username']}.",
+                'targetId' => $id,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can delete tasks.'], 403);
+        }
+    } elseif ($collection === 'events') {
+        if (!canManageEvents($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'EVENTS',
+                'status' => 'DENIED',
+                'details' => "Unauthorized delete attempt on event {$id} by @{$user['username']}.",
+                'targetId' => $id,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can delete events.'], 403);
+        }
+    } elseif ($collection === 'attendance') {
+        if (!canRecordAttendance($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'ATTENDANCE',
+                'status' => 'DENIED',
+                'details' => "Unauthorized delete attempt on attendance record {$id} by @{$user['username']}.",
+                'targetId' => $id,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can delete attendance records.'], 403);
+        }
+    } elseif ($collection === 'announcements') {
+        if (!canManageAnnouncements($user)) {
+            appendAuditLog($pdo, [
+                'actor' => $user,
+                'action' => 'SECURITY_ACCESS_DENIED',
+                'module' => 'ANNOUNCEMENTS',
+                'status' => 'DENIED',
+                'details' => "Unauthorized delete attempt on announcement {$id} by @{$user['username']}.",
+                'targetId' => $id,
+            ]);
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can delete announcements.'], 403);
+        }
+    } elseif ($collection === 'certificates') {
+        if (!canManageCertificates($user)) {
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can delete certificates.'], 403);
+        }
+    } elseif ($collection === 'achievements') {
+        if (!canManageAchievements($user)) {
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only authorized officers can delete achievements.'], 403);
+        }
+    } elseif ($collection === 'settings') {
+        if (!canManageSettings($user)) {
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'Only Master Administrator can delete system settings.'], 403);
+        }
+    } elseif ($collection === 'updates') {
+        $authorId = (string)($existingRow['author_id'] ?? '');
+        if ($authorId !== ($user['id'] ?? '') && !isMasterAdmin($user)) {
+            sendJson(['ok' => false, 'error' => 'FORBIDDEN', 'message' => 'You can only delete your own community updates.'], 403);
+        }
     }
 
     $stmt = $pdo->prepare("DELETE FROM `{$table}` WHERE id = ?");

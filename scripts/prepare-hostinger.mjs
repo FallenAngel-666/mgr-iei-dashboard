@@ -165,21 +165,15 @@ if (!htaccess.includes('RewriteRule ^api(/|$) - [L,NC]') || !htaccess.includes('
 }
 console.log('  [OK] dist/.htaccess verified (HTTPS, PHP /api & /uploads bypass, SPA fallback, security headers)');
 
-// 7. Create hostinger-deploy-package.zip (includes all .htaccess dotfiles!)
+// 7. Create hostinger-deploy-package.zip with strictly POSIX-compliant forward slashes (Linux-compatible)
 try {
   if (fs.existsSync(ZIP_OUTPUT)) fs.unlinkSync(ZIP_OUTPUT);
-  if (process.platform === 'win32') {
-    execSync(
-      `powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${DIST}', '${ZIP_OUTPUT}', [System.IO.Compression.CompressionLevel]::Optimal, $false)"`,
-      { stdio: 'inherit' }
-    );
-  } else {
-    execSync(`cd "${DIST}" && zip -r "${ZIP_OUTPUT}" .`, { stdio: 'inherit' });
-  }
+  const zipScript = path.join(ROOT, 'scripts', 'build-hostinger-zip.py');
+  execSync(`python "${zipScript}" "${DIST}" "${ZIP_OUTPUT}"`, { stdio: 'inherit' });
   const zipSizeMB = (fs.statSync(ZIP_OUTPUT).size / (1024 * 1024)).toFixed(2);
   console.log(`  [OK] Created 100% Hostinger upload archive: hostinger-deploy-package.zip (${zipSizeMB} MB)`);
 } catch (err) {
-  console.warn('  [WARN] Could not create zip archive automatically:', err.message);
+  fail(`Could not create POSIX-compliant zip archive: ${err.message}`);
 }
 
 console.log('================================================================');

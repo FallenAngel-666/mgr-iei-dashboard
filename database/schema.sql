@@ -264,3 +264,15 @@ CREATE TABLE IF NOT EXISTS `iei_login_attempts` (
   KEY `idx_login_ip_time` (`ip_address`, `attempt_time`),
   KEY `idx_login_ident_time` (`identifier`, `attempt_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- 17. TOKEN REVOCATION & IMMEDIATE LOGOUT INVALIDATION
+-- Blacklists revoked HMAC Bearer tokens so logged-out tokens cannot access APIs
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `iei_revoked_tokens` (
+  `token_hash` VARCHAR(64) NOT NULL,
+  `revoked_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`token_hash`),
+  KEY `idx_revoked_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

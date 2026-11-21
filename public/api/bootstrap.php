@@ -149,18 +149,32 @@ function getAuthenticatedUser(PDO $pdo): ?array {
         return null;
     }
 
+    // Verify token has not been revoked
+    $tokenHash = hash('sha256', $token);
+    try {
+        $revStmt = $pdo->prepare('SELECT 1 FROM iei_revoked_tokens WHERE token_hash = ? AND expires_at > ? LIMIT 1');
+        $revStmt->execute([$tokenHash, time()]);
+        if ($revStmt->fetch()) {
+            return null; // Token has been revoked!
+        }
+    } catch (Throwable $e) {
+        // Proceed if table not migrated yet
+    }
+
     $stmt = $pdo->prepare('SELECT * FROM iei_members WHERE id = ? LIMIT 1');
     $stmt->execute([$claims['sub']]);
     $row = $stmt->fetch();
     if (!$row) return null;
 
-    $member = json_decode($row['data_json'], true) ?: [];
+    $member = json_decode((string)$row['data_json'], true) ?: [];
     $member['id'] = $row['id'];
     $member['name'] = $row['name'];
     $member['role'] = $row['role'];
     $member['username'] = $row['username'];
     $member['email'] = $row['email'];
     $member['status'] = $row['status'];
+    $member['is_master_admin'] = (int)$row['is_master_admin'];
+    $member['isMasterAdmin'] = (bool)$row['is_master_admin'];
 
     if (strtolower((string)$member['status']) !== 'active') {
         return null;
@@ -181,29 +195,95 @@ function requireAuth(PDO $pdo): array {
 // ============================================================================
 function isMasterAdmin(?array $user): bool {
     if (!$user) return false;
-    return ($user['role'] ?? '') === 'Administrator'
+    $role = (string)($user['role'] ?? '');
+    $username = strtolower((string)($user['username'] ?? ''));
+    $id = (string)($user['id'] ?? '');
+    return $role === 'Administrator'
         || !empty($user['isMasterAdmin'])
-        || in_array(strtolower((string)($user['username'] ?? '')), ['admin.master-01', 'administrator'], true);
+        || !empty($user['is_master_admin'])
+        || in_array($username, ['admin.master-01', 'administrator'], true)
+        || $id === 'user-administrator';
 }
 
-function canAccessActivityConsole(?array $user): bool {
+function isStaffCoordinator(?array $user): bool {
     if (!$user) return false;
     if (isMasterAdmin($user)) return true;
-    $username = strtolower((string)($user['username'] ?? ''));
-    $name = strtolower((string)($user['name'] ?? ''));
     $role = (string)($user['role'] ?? '');
-    return $username === 'sripriyan.jsec-01'
-        || ($role === 'Joint Secretary' && str_contains($name, 'sripriyan'));
+    $username = strtolower((string)($user['username'] ?? ''));
+    $id = (string)($user['id'] ?? '');
+    return $role === 'Staff Coordinator'
+        || in_array($username, ['staff.login', 'staff.coord-01'], true)
+        || $id === 'user-staff-coord';
+}
+
+function isFirstLevelApprover(?array $user): bool {
+    if (!$user) return false;
+    if (isMasterAdmin($user)) return true;
+    $role = (string)($user['role'] ?? '');
+    $allowed = ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary'];
+    return in_array($role, $allowed, true);
+}
+
+function canAssignWork(?array $user): bool {
+    if (!$user) return false;
+    if (isMasterAdmin($user) || isStaffCoordinator($user) || isFirstLevelApprover($user)) return true;
+    $role = (string)($user['role'] ?? '');
+    return $role === 'Event Management Head';
+}
+
+function canManageEvents(?array $user): bool {
+    if (!$user) return false;
+    if (isMasterAdmin($user) || isStaffCoordinator($user)) return true;
+    $role = (string)($user['role'] ?? '');
+    $allowed = ['Chairman', 'Vice Chairman', 'Secretary', 'Joint Secretary', 'Event Management Head'];
+    return in_array($role, $allowed, true);
+}
+
+function canManageAnnouncements(?array $user): bool {
+    if (!$user) return false;
+    if (isMasterAdmin($user) || isStaffCoordinator($user) || isFirstLevelApprover($user)) return true;
+    return false;
+}
+
+function canRecordAttendance(?array $user): bool {
+    return canManageEvents($user);
+}
+
+function canManageCertificates(?array $user): bool {
+    return isMasterAdmin($user) || isStaffCoordinator($user) || isFirstLevelApprover($user);
+}
+
+function canManageAchievements(?array $user): bool {
+    return isMasterAdmin($user) || isStaffCoordinator($user) || isFirstLevelApprover($user);
+}
+
+function canManageSettings(?array $user): bool {
+    return isMasterAdmin($user);
 }
 
 function canAccessMembersDirectory(?array $user): bool {
     if (!$user) return false;
     if (isMasterAdmin($user)) return true;
     $username = strtolower((string)($user['username'] ?? ''));
-    $name = strtolower((string)($user['name'] ?? ''));
+    $name = strtoupper((string)($user['name'] ?? ''));
+    $role = (string)($user['role'] ?? '');
     $allowedUsers = ['sripriyan.jsec-01', 'ramya.emhead-01', 'ramya.memdir-01', 'swathi.memdir-01', 'swathi.emhead-01'];
     if (in_array($username, $allowedUsers, true)) return true;
-    return str_contains($name, 'sripriyan') || str_contains($name, 'ramya') || str_contains($name, 'swathi');
+    return str_contains($name, 'SRIPRIYAN') || str_contains($name, 'SWATHI') || (str_contains($name, 'RAMYA') && str_contains($name, 'SRI')) || $role === 'Membership Director';
+}
+
+function canAccessActivityConsole(?array $user): bool {
+    if (!$user) return false;
+    if (isMasterAdmin($user)) return true;
+    $username = strtolower((string)($user['username'] ?? ''));
+    $name = strtoupper((string)($user['name'] ?? ''));
+    $role = (string)($user['role'] ?? '');
+    return $username === 'sripriyan.jsec-01'
+        || ($role === 'Joint Secretary' && str_contains($name, 'SRIPRIYAN'));
+}
+
+function canAccessWorkAnalytics(?array $user): bool {
+    return isMasterAdmin($user) || isStaffCoordinator($user);
 }
 
 function canAccessProfileUpdate(?array $user): bool {

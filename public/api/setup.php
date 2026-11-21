@@ -136,8 +136,52 @@ if ($method === 'POST') {
 
         if (!$error) {
             try {
-                $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                // Atomic transaction to prevent race conditions during initialization
+                $pdo->beginTransaction();
+
+                // 1. Strict check: Refuse initialization if an administrator already exists
+                $adminCheck = $pdo->query("SELECT COUNT(*) FROM iei_members WHERE is_master_admin = 1 OR role = 'Administrator' FOR UPDATE");
+                if ((int)$adminCheck->fetchColumn() > 0) {
+                    $pdo->rollBack();
+                    @file_put_contents($lockFile, "Installed on " . gmdate('c'));
+                    if ($isJson) {
+                        sendJson([
+                            'ok' => false,
+                            'error' => 'SETUP_LOCKED',
+                            'message' => 'System has already been initialized. First administrator setup is permanently locked.'
+                        ], 403);
+                    }
+                    $error = 'System has already been initialized. First administrator setup is locked.';
+                    throw new Exception($error);
+                }
+
+                // 2. Conflict check: Refuse if chosen username, email, or ID collides with ANY existing member
                 $userId = 'user-administrator';
+                $conflictStmt = $pdo->prepare(
+                    'SELECT id, username, email FROM iei_members
+                     WHERE LOWER(username) = ?
+                        OR LOWER(email) = ?
+                        OR LOWER(secondary_username) = ?
+                        OR LOWER(secondary_email) = ?
+                        OR id = ?
+                     LIMIT 1'
+                );
+                $conflictStmt->execute([$username, $email, $username, $email, $userId]);
+                $existingCollision = $conflictStmt->fetch();
+                if ($existingCollision) {
+                    $pdo->rollBack();
+                    if ($isJson) {
+                        sendJson([
+                            'ok' => false,
+                            'error' => 'ACCOUNT_CONFLICT',
+                            'message' => 'The chosen username or email is already registered to an existing member record. Account collision prevented.'
+                        ], 409);
+                    }
+                    $error = 'The chosen username or email is already in use by an existing member record.';
+                    throw new Exception($error);
+                }
+
+                $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
                 $memberData = [
                     'id' => $userId,
@@ -159,20 +203,14 @@ if ($method === 'POST') {
 
                 $json = json_encode($memberData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-                $stmt = $pdo->prepare(
+                // 3. Strict INSERT (Strict single insert to prevent account promotion races)
+                $insertStmt = $pdo->prepare(
                     'INSERT INTO iei_members
                      (id, name, role, username, secondary_username, email, secondary_email, phone, department, membership_id, year, status, is_master_admin, password_hash, data_json)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                     ON DUPLICATE KEY UPDATE
-                       name = VALUES(name), role = VALUES(role), username = VALUES(username),
-                       secondary_username = VALUES(secondary_username), email = VALUES(email),
-                       phone = VALUES(phone), department = VALUES(department),
-                       status = VALUES(status), is_master_admin = VALUES(is_master_admin),
-                       password_hash = VALUES(password_hash), data_json = VALUES(data_json),
-                       updated_at = CURRENT_TIMESTAMP'
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
                 );
 
-                $stmt->execute([
+                $insertStmt->execute([
                     $userId,
                     $name,
                     'Administrator',
@@ -201,11 +239,14 @@ if ($method === 'POST') {
                     'action' => 'AUTH_INITIAL_SETUP',
                     'module' => 'SECURITY',
                     'status' => 'SUCCESS',
-                    'details' => "Master Administrator account initialized successfully for @{$username} via secure setup utility.",
+                    'details' => "Master Administrator account initialized successfully for @{$username} via secure atomic setup utility.",
                     'targetId' => $userId
                 ]);
 
-                // Write lock file
+                // Commit transaction
+                $pdo->commit();
+
+                // Write permanent lock file
                 @file_put_contents($lockFile, "Installed by {$username} on " . gmdate('c'));
 
                 if ($isJson) {

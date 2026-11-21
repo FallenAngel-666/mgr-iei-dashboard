@@ -32,16 +32,35 @@ foreach ($possibleConfigPaths as $p) {
 $apiDir = $configPath ? dirname($configPath) : __DIR__;
 $lockFile = $apiDir . '/.installed';
 if (!$isCli && file_exists($lockFile)) {
-    // Check if valid admin token is supplied
-    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
-    if (!preg_match('/Bearer\s+([A-Za-z0-9\-_\.]+)/i', $authHeader)) {
+    // Require valid, non-revoked Master Administrator authentication
+    $bootstrapPath = $apiDir . '/bootstrap.php';
+    if (file_exists($bootstrapPath)) {
+        require_once $bootstrapPath;
+        try {
+            $pdoAuth = getDb();
+            $authAdmin = getAuthenticatedUser($pdoAuth);
+            if (!$authAdmin || !isMasterAdmin($authAdmin)) {
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'ok' => false,
+                    'error' => 'FORBIDDEN',
+                    'message' => 'Schema verification endpoint requires Master Administrator authentication in production. Use CLI or sign in as Master Administrator.'
+                ]);
+                exit;
+            }
+        } catch (Throwable $e) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => false,
+                'error' => 'VERIFY_LOCKED',
+                'message' => 'Verification endpoint locked.'
+            ]);
+            exit;
+        }
+    } else {
         http_response_code(403);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode([
-            'ok' => false,
-            'error' => 'VERIFY_LOCKED',
-            'message' => 'Schema verification utility is locked in production. Run via SSH/CLI or sign in as Master Administrator.'
-        ]);
         exit;
     }
 }
@@ -105,7 +124,7 @@ if ($configPath !== null) {
     }
 }
 
-// 4. Verify All 16 Required Tables
+// 4. Verify All 17 Required Tables
 $expectedTables = [
     'iei_sync_meta'       => ['collection_name', 'version'],
     'iei_members'         => ['id', 'username', 'role', 'status', 'password_hash', 'data_json'],
@@ -123,6 +142,7 @@ $expectedTables = [
     'system_audit_logs'   => ['id', 'event_timestamp', 'action', 'module', 'status', 'data_json'],
     'iei_system_settings' => ['id', 'data_json'],
     'iei_login_attempts'  => ['id', 'ip_address', 'identifier', 'attempt_time'],
+    'iei_revoked_tokens'  => ['token_hash', 'revoked_at', 'expires_at'],
 ];
 
 if ($pdo instanceof PDO) {

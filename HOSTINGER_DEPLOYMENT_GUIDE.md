@@ -58,7 +58,7 @@ Before starting, ensure you have:
    - Click the **Import** tab at the top.
    - Click **Choose File** $\rightarrow$ navigate into the extracted `database/` folder and select **`schema.sql`**.
    - Click **Import** (or **Go**) at the bottom.
-     *(This creates all 16 required tables).*
+     *(This creates all 17 required tables).*
    - Click the **Import** tab again $\rightarrow$ choose **`database/seed.sql`** $\rightarrow$ Click **Import**.
      *(This seeds initial system rules, collection versions, and public profile).*
 

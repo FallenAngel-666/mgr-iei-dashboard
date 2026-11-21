@@ -36,6 +36,7 @@ The database is built on standard **MySQL 8.0+ / MariaDB 10.6+** and supports ov
 |                                                                         |
 | 5. Security & Storage:                                                  |
 |    - iei_uploads         : Metadata index for Hostinger NVMe files      |
+|    - iei_revoked_tokens  : Revoked HMAC token blacklist on logout      |
 |    - system_audit_logs   : Append-only immutable institutional log      |
 +-------------------------------------------------------------------------+
 ```
@@ -59,6 +60,7 @@ The database is built on standard **MySQL 8.0+ / MariaDB 10.6+** and supports ov
 | **`iei_public_profile`**| Public landing page configuration (Faculty Advisor: Dr. Antony Xavier Bronson). | `PRIMARY KEY (id)` |
 | **`iei_public_events`** | Upcoming events shown to external visitors. | `PRIMARY KEY (id)`, `(event_date)` |
 | **`iei_uploads`** | File upload metadata (original name, stored random name, size, MIME type). | `PRIMARY KEY (id)`, `(folder, created_at)` |
+| **`iei_revoked_tokens`**| Revoked HMAC Bearer token blacklist on logout for immediate invalidation. | `PRIMARY KEY (token_hash)`, `(expires_at)` |
 | **`system_audit_logs`** | Append-only immutable log of every action taken in the portal. | `PRIMARY KEY (id)`, `(module, created_at)`, `(actor_username)` |
 | **`iei_system_settings`**| Global portal rules (e.g. Weekly Work Submission Restriction). | `PRIMARY KEY (id)` |
 | **`iei_login_attempts`**| IP and username tracking to block brute-force password attempts. | `PRIMARY KEY (id)`, `(ip_address, attempt_time)` |
