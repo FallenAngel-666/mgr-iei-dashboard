@@ -114,11 +114,21 @@ export function AuthProvider({ children }) {
 
       // 100% Hostinger MySQL Authentication Mode
       if (isHostingerBackend()) {
-        const res = await hostingerLogin(cleanIdentifier, cleanPassword);
-        setCurrentUser(res.user);
-        setLoading(false);
-        await triggerHostingerSync(true);
-        return { success: true, user: res.user };
+        try {
+          const res = await hostingerLogin(cleanIdentifier, cleanPassword);
+          setCurrentUser(res.user);
+          setLoading(false);
+          await triggerHostingerSync(true);
+          return { success: true, user: res.user };
+        } catch (hostingerErr) {
+          // If the server returns 404 or 405 (e.g. static CDN/Vercel preview where PHP is not available),
+          // fallback to client-side sample authentication so the user can still preview the portal
+          if (hostingerErr.status === 404 || hostingerErr.status === 405 || (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app'))) {
+            console.warn('Hostinger PHP API is not hosted on this static environment; falling back to sample preview mode.');
+          } else {
+            throw hostingerErr;
+          }
+        }
       }
 
       const allMembers = await getMembers();

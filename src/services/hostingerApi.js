@@ -20,6 +20,14 @@ function getEnvVar(key) {
 }
 
 export function isHostingerBackend() {
+  if (typeof window !== 'undefined') {
+    const hostname = (window.location.hostname || '').toLowerCase();
+    // Vercel is a static CDN deployment intended for online sample/demo preview.
+    // Because Vercel does not execute PHP scripts, route Vercel to client-side sample mode.
+    if (hostname.includes('vercel.app')) {
+      return false;
+    }
+  }
   return String(getEnvVar('VITE_BACKEND_MODE') || '').toLowerCase() === 'hostinger';
 }
 
@@ -76,7 +84,10 @@ async function apiRequest(endpoint, { method = 'GET', body = null, auth = true }
   try {
     data = await response.json();
   } catch {
-    throw new Error(`Hostinger API returned non-JSON response (HTTP ${response.status}).`);
+    const err = new Error(`Hostinger API returned non-JSON response (HTTP ${response.status}).`);
+    err.status = response.status;
+    err.code = 'NON_JSON_RESPONSE';
+    throw err;
   }
 
   if (!response.ok || (data && data.ok === false)) {
