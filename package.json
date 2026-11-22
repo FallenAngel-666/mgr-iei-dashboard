@@ -11,9 +11,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/verification-suite.js && node test/hostinger-security-suite.mjs",
+    "test": "node test/verification-suite.js && node test/hostinger-security-suite.mjs && node test/traffic-engine-suite.mjs",
     "test:security": "node test/hostinger-security-suite.mjs",
     "test:scale": "node test/scalability-benchmark.mjs",
+    "test:traffic": "node test/traffic-engine-suite.mjs",
+    "test:load": "node test/load-testing-suite.mjs",
+    "start:server": "node server/index.js",
     "check": "node test/verification-suite.js && node test/scalability-benchmark.mjs && vite build",
     "build:hostinger": "node scripts/prepare-hostinger.mjs",
     "migrate:mysql": "node scripts/export-to-mysql-sql.mjs",
@@ -27,7 +30,17 @@
     "deploy:rules": "firebase deploy --only firestore:rules,storage:rules,firestore:indexes",
     "deploy:all": "npm run build && firebase deploy --only hosting,firestore,storage"
   },
-  "dependencies": {},
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.24.6",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4"
+  },
   "devDependencies": {
     "@capacitor/android": "^8.6.0",
     "@capacitor/cli": "^8.6.0",

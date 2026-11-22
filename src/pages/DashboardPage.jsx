@@ -40,6 +40,7 @@ import { AchievementsList } from '../components/achievements/AchievementsList';
 import { AnnouncementsList } from '../components/announcements/AnnouncementsList';
 import { ProfileUpdateView } from '../components/profile/ProfileUpdateView';
 import { SystemActivityConsole } from '../components/console/SystemActivityConsole';
+import { TrafficManagementDashboard } from '../components/admin/TrafficManagementDashboard';
 import { recordActivity, AUDIT_ACTIONS, AUDIT_MODULES } from '../services/auditService';
 
 export function DashboardPage() {
@@ -357,6 +358,11 @@ export function DashboardPage() {
                   </button>
                 </div>
               )
+            )}
+
+            {/* TRAFFIC MANAGEMENT & VIRTUAL WAITING ROOM TAB - Master Administrator */}
+            {activeTab === 'trafficManagement' && (
+              <TrafficManagementDashboard />
             )}
           </div>
         </main>

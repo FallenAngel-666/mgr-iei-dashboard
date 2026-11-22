@@ -1,0 +1,38 @@
+[Unit]
+Description=IEI MGR Student Chapter Node.js Traffic Engine & Backend
+After=network.target redis-server.service mysql.service
+Wants=redis-server.service mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/mgr-iei-platform
+EnvironmentFile=/var/www/mgr-iei-platform/.env
+ExecStart=/usr/bin/node server/index.js
+
+# Process Management & Auto-Restart
+Restart=always
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=15s
+
+# Security Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+# Resource Limits (aligned with Hostinger KVM 2 VPS: 2 vCPU, 8 GB RAM)
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=3G
+CPUQuota=180%
+
+# Standard Output & Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iei-mgr-backend
+
+[Install]
+WantedBy=multi-user.target

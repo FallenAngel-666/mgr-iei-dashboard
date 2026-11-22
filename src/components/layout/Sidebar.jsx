@@ -27,7 +27,8 @@ import {
   Globe,
   Terminal,
   X,
-  Building2
+  Building2,
+  Zap
 } from 'lucide-react';
 
 export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pendingApprovalCount = 0 }) {
@@ -129,8 +130,20 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
       label: 'System Activity Console',
       icon: Terminal,
       badge: null
+    },
+    {
+      id: 'trafficManagement',
+      label: 'Traffic & Waiting Room',
+      icon: Zap,
+      badge: null
     }
   ];
+
+  const isMasterAdmin = currentUser && (
+    currentUser.isMasterAdmin ||
+    currentUser.role === 'Administrator' ||
+    currentUser.username === 'admin.master-01'
+  );
 
   const canSeeMembers = canAccessMembersDirectory(currentUser);
   const canEditPublicProfile = canAccessProfileUpdate(role);
@@ -142,6 +155,7 @@ export function Sidebar({ activeTab, setActiveTab, mobileOpen, setMobileOpen, pe
     if (item.id === 'members' && !canSeeMembers) return false;
     if (item.id === 'profileUpdate' && !canEditPublicProfile) return false;
     if (item.id === 'activityConsole' && !canSeeConsole) return false;
+    if (item.id === 'trafficManagement' && !isMasterAdmin) return false;
     return true;
   });
 

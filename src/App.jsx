@@ -4,21 +4,25 @@ import { NotificationProvider } from './context/NotificationContext';
 import { WelcomePage } from './pages/WelcomePage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { VirtualWaitingRoom } from './components/waiting-room/VirtualWaitingRoom';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
   
   // URL hash based view resolution: defaults to 'welcome'
   const [publicView, setPublicView] = useState(() => {
-    if (typeof window !== 'undefined' && window.location.hash === '#login') {
-      return 'login';
+    if (typeof window !== 'undefined') {
+      if (window.location.hash === '#waiting-room') return 'waiting-room';
+      if (window.location.hash === '#login') return 'login';
     }
     return 'welcome';
   });
 
   useEffect(() => {
     const handleHashChange = () => {
-      if (window.location.hash === '#login') {
+      if (window.location.hash === '#waiting-room') {
+        setPublicView('waiting-room');
+      } else if (window.location.hash === '#login') {
         setPublicView('login');
       } else {
         setPublicView('welcome');
@@ -60,6 +64,20 @@ function AppContent() {
           Authenticating IEI Dashboard System Session...
         </p>
       </div>
+    );
+  }
+
+  // Waiting room view (can be opened by unauthenticated visitors or redirected users)
+  if (publicView === 'waiting-room') {
+    return (
+      <VirtualWaitingRoom 
+        onAdmitted={() => {
+          const target = sessionStorage.getItem('iei_post_admission_target') || '#/';
+          sessionStorage.removeItem('iei_post_admission_target');
+          window.location.hash = target.replace('#', '') || '';
+          setPublicView(isAuthenticated ? 'dashboard' : 'welcome');
+        }} 
+      />
     );
   }
 
