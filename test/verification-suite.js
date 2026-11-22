@@ -591,18 +591,23 @@ async function runTestSuite() {
 
   // 9. COMMUNITY WORK UPDATES
   console.log('\n--- 9. Community Work Updates Feed ---');
-  await asyncTest('Members post work updates with images and documents', async () => {
+  await asyncTest('Members post work updates with images, documents, and recorded duration', async () => {
     const sriman = loadedMembers.find((m) => m.role === ROLES.CHAIRMAN);
     const update = await createCommunityUpdate({
       author: sriman,
       content: 'Welcoming all new committee members to the 2026 Chapter Management Portal! Let us achieve great milestones together.',
       imageUrl: null,
-      attachmentName: 'Welcome_IEI_2026.pdf'
+      attachmentName: 'Welcome_IEI_2026.pdf',
+      hoursWorked: 2,
+      minutesWorked: 30
     });
 
     assert.ok(update.id);
     assert.strictEqual(update.authorName, sriman.name);
     assert.strictEqual(update.authorRole, ROLES.CHAIRMAN);
+    assert.strictEqual(update.hoursWorked, 2);
+    assert.strictEqual(update.minutesWorked, 30);
+    assert.strictEqual(update.totalMinutes, 150);
   });
 
   // 10. DATA PERSISTENCE ACROSS LOGOUT & RE-LOGIN

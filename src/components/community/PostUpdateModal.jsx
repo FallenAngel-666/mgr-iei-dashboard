@@ -9,22 +9,46 @@ import {
   Paperclip, 
   X, 
   Sparkles,
-  ShieldCheck 
+  ShieldCheck,
+  Clock,
+  AlertCircle 
 } from 'lucide-react';
 
 export function PostUpdateModal({ isOpen, onClose }) {
   const { currentUser } = useAuth();
   const [content, setContent] = useState('');
+  const [hoursWorked, setHoursWorked] = useState('');
+  const [minutesWorked, setMinutesWorked] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [attachmentName, setAttachmentName] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [formError, setFormError] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     if (!content.trim() || !currentUser) return;
+
+    const h = parseInt(hoursWorked, 10) || 0;
+    const m = parseInt(minutesWorked, 10) || 0;
+
+    if (h === 0 && m === 0) {
+      setFormError('Please enter the actual time spent on this work (at least 1 minute or hour).');
+      return;
+    }
+
+    if (h < 0 || h > 24) {
+      setFormError('Hours worked must be between 0 and 24.');
+      return;
+    }
+
+    if (m < 0 || m > 59) {
+      setFormError('Minutes worked must be between 0 and 59.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -35,18 +59,25 @@ export function PostUpdateModal({ isOpen, onClose }) {
           role: currentUser.role
         },
         content: content.trim(),
+        hoursWorked: h,
+        minutesWorked: m,
+        totalMinutes: (h * 60) + m,
         imageUrl: previewImage || (imageUrl.trim() ? imageUrl.trim() : null),
         attachmentName: attachmentName.trim() || null
       });
 
       setContent('');
+      setHoursWorked('');
+      setMinutesWorked('');
       setImageUrl('');
       setAttachmentName('');
       setPreviewImage(null);
+      setFormError('');
       setLoading(false);
       onClose();
     } catch (err) {
       console.error(err);
+      setFormError(err.message || 'Failed to publish work update.');
       setLoading(false);
     }
   };
@@ -87,6 +118,14 @@ export function PostUpdateModal({ isOpen, onClose }) {
           </div>
         </div>
 
+        {/* Form Error Banner */}
+        {formError && (
+          <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span className="font-semibold">{formError}</span>
+          </div>
+        )}
+
         {/* Text Area */}
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -96,10 +135,65 @@ export function PostUpdateModal({ isOpen, onClose }) {
             required
             rows={4}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => {
+              setContent(e.target.value);
+              if (formError) setFormError('');
+            }}
             placeholder="Describe what work you have completed or ongoing progress for your assigned responsibilities..."
             className="w-full text-xs p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-iei-navy-500 focus:border-iei-navy-500 resize-none"
           />
+        </div>
+
+        {/* Duration Tracking: Hours & Minutes Worked */}
+        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+          <div className="flex items-center gap-1.5 text-iei-navy-950 font-bold text-xs">
+            <Clock className="w-4 h-4 text-iei-gold-600" />
+            <span>Actual Time Spent on this Work *</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                Hours Worked *
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="24"
+                placeholder="e.g. 2"
+                value={hoursWorked}
+                onChange={(e) => {
+                  setHoursWorked(e.target.value);
+                  if (formError) setFormError('');
+                }}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-iei-navy-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                Minutes Worked (0–59) *
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                placeholder="e.g. 30"
+                value={minutesWorked}
+                onChange={(e) => {
+                  setMinutesWorked(e.target.value);
+                  if (formError) setFormError('');
+                }}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-iei-navy-500"
+              />
+            </div>
+          </div>
+          {(hoursWorked || minutesWorked) && (
+            <div className="text-[11px] font-bold text-iei-navy-900 bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex items-center justify-between">
+              <span>Total Session Duration:</span>
+              <span className="font-mono text-emerald-700">
+                {hoursWorked || 0} hr {minutesWorked || 0} min ({(((Number(hoursWorked) || 0) * 60) + (Number(minutesWorked) || 0))} minutes)
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Image Attachment (File or URL) */}

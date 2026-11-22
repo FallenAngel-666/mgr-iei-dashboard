@@ -605,7 +605,19 @@ export async function getUpdates() {
   return [...updatesStore];
 }
 
-export async function createCommunityUpdate({ author, content, imageUrl, attachmentName }) {
+export async function createCommunityUpdate({ 
+  author, 
+  content, 
+  imageUrl, 
+  attachmentName,
+  hoursWorked = 0,
+  minutesWorked = 0,
+  totalMinutes = 0
+}) {
+  const h = Number(hoursWorked) || 0;
+  const m = Number(minutesWorked) || 0;
+  const durMins = totalMinutes || ((h * 60) + m);
+
   const newUpdate = {
     id: `upd-${Date.now()}`,
     authorId: author.id,
@@ -615,6 +627,9 @@ export async function createCommunityUpdate({ author, content, imageUrl, attachm
     content,
     imageUrl: imageUrl || null,
     attachmentName: attachmentName || null,
+    hoursWorked: h,
+    minutesWorked: m,
+    totalMinutes: durMins,
     reactions: { like: 0, celebrate: 0 }
   };
   updatesStore.unshift(newUpdate);
@@ -622,21 +637,23 @@ export async function createCommunityUpdate({ author, content, imageUrl, attachm
   await syncToFirestore('iei_updates', newUpdate.id, newUpdate);
 
   // Record audit trail
+  const durationDesc = durMins > 0 ? ` [Time logged: ${h}h ${m}m]` : '';
   recordActivity({
     actor: author,
     action: AUDIT_ACTIONS.CHAT_MESSAGE_SENT,
     module: AUDIT_MODULES.CHAT,
     status: 'SUCCESS',
-    details: `Community work update posted by ${author.name}: "${content.substring(0, 80)}"`,
+    details: `Community work update posted by ${author.name}${durationDesc}: "${content.substring(0, 80)}"`,
     targetId: newUpdate.id,
-    newValues: { content: content.substring(0, 100), attachmentName }
+    newValues: { content: content.substring(0, 100), attachmentName, hoursWorked: h, minutesWorked: m, totalMinutes: durMins }
   });
 
   // Notify chapter members
+  const durationNotif = durMins > 0 ? ` (${h}h ${m}m)` : '';
   await createNotification({
     recipientId: 'all',
     title: 'New Community Work Update',
-    message: `${author.name} (${author.role}) posted a work update: "${content.substring(0, 75)}..."`,
+    message: `${author.name} (${author.role}) posted a work update${durationNotif}: "${content.substring(0, 75)}..."`,
     type: 'community_update',
     linkId: newUpdate.id
   });

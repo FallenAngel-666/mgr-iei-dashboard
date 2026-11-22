@@ -9,7 +9,8 @@ import {
   Search, 
   Calendar,
   ShieldCheck,
-  Share2
+  Share2,
+  Clock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { PostUpdateModal } from './PostUpdateModal';
@@ -122,6 +123,17 @@ export function CommunityFeed({ updates = [] }) {
                         <ShieldCheck className="w-3 h-3 text-amber-600" />
                         {update.authorRole}
                       </span>
+                      {(update.hoursWorked > 0 || update.minutesWorked > 0 || update.totalMinutes > 0) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                          <Clock className="w-3 h-3 text-indigo-600" />
+                          <span>
+                            {update.hoursWorked ? `${update.hoursWorked}h ` : ''}
+                            {update.minutesWorked ? `${update.minutesWorked}m ` : ''}
+                            {!update.hoursWorked && !update.minutesWorked && update.totalMinutes ? `${update.totalMinutes}m ` : ''}
+                            logged
+                          </span>
+                        </span>
+                      )}
                       <span className="text-[11px] text-slate-400">
                         • {update.timestamp ? formatDistanceToNow(new Date(update.timestamp), { addSuffix: true }) : 'Recently'}
                       </span>
